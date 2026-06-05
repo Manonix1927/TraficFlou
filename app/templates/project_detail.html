@@ -112,47 +112,107 @@
 
     <!-- Settings panel -->
     <div class="space-y-4">
-      <form method="post" action="/projects/{{ project.id }}/update" x-data="settingsForm()" class="space-y-4">
+      <form method="post" action="/projects/{{ project.id }}/update"
+            x-data="settingsForm()" class="space-y-4">
+
+        <input type="hidden" name="name" value="{{ project.name }}"/>
+        <input type="hidden" name="daily_hits" value="{{ project.daily_hits }}"/>
+
+        <!-- Device -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <h3 class="font-semibold text-white text-sm mb-3">Устройство</h3>
+          <div class="flex gap-2">
+            {% for dkey, dlabel in [('desktop','🖥 Desktop'),('mobile','📱 Mobile'),('mixed','🔀 Mixed')] %}
+            <label style="flex:1;border:1px solid;border-radius:0.5rem;padding:0.5rem;text-align:center;cursor:pointer;font-size:0.75rem;transition:all 0.15s;"
+              :class="device==='{{ dkey }}' ? 'border-blue-500 bg-blue-900/30 color:#fff' : 'border-slate-600 color:rgb(148 163 184)'"
+              :style="device==='{{ dkey }}' ? 'border-color:rgb(59 130 246);background:rgba(30,58,138,0.3);color:#fff' : 'border-color:rgb(71 85 105);color:rgb(148 163 184)'">
+              <input type="radio" name="device" value="{{ dkey }}" x-model="device" class="hidden"/>
+              {{ dlabel }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
 
         <!-- Sources -->
         <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-semibold text-white text-sm">Источники</h3>
-            <span class="text-xs" :class="srcTotal===100?'text-green-400':'text-red-400'">
-              <span x-text="srcTotal"></span>%
-            </span>
-          </div>
-          <input type="hidden" name="name" value="{{ project.name }}"/>
-          <input type="hidden" name="daily_hits" value="{{ project.daily_hits }}"/>
-          <div class="space-y-2.5">
-            {% for key, label in [('organic','Organic'),('social','Social'),('direct','Direct'),('referral','Referral')] %}
             <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 w-16">{{ label }}</span>
-              <input type="range" name="sources_{{ key }}" min="0" max="100"
-                value="{{ project.sources.get(key, 0) }}"
-                x-model.number="src.{{ key }}"
-                class="flex-1 accent-blue-500"/>
-              <span class="text-xs text-white w-8 text-right" x-text="src.{{ key }}+'%'"></span>
+              <span class="text-xs" :class="srcTotal===100?'text-green-400':'text-red-400'"><span x-text="srcTotal"></span>%</span>
+              <button type="button" @click="addSrc()" class="text-xs text-blue-400 hover:text-blue-300">+ Добавить</button>
             </div>
-            {% endfor %}
+          </div>
+          <div class="space-y-2">
+            <template x-for="(s, i) in sources" :key="i">
+              <div class="flex items-center gap-2">
+                <select x-model="s.key" :name="'source_keys'"
+                  style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.5rem;color:#fff;font-size:0.75rem;outline:none;">
+                  <optgroup label="Organic Search" style="background:rgb(15 23 42)">
+                    <option value="google_organic">Google Organic</option>
+                    <option value="bing_organic">Bing Organic</option>
+                    <option value="duckduckgo_organic">DuckDuckGo</option>
+                    <option value="yahoo_organic">Yahoo Organic</option>
+                    <option value="youtube_organic">YouTube Organic</option>
+                  </optgroup>
+                  <optgroup label="Paid" style="background:rgb(15 23 42)">
+                    <option value="google_cpc">Google Ads (CPC)</option>
+                  </optgroup>
+                  <optgroup label="Social" style="background:rgb(15 23 42)">
+                    <option value="instagram">Instagram</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="twitter">Twitter / X</option>
+                    <option value="pinterest">Pinterest</option>
+                    <option value="tiktok">TikTok</option>
+                  </optgroup>
+                  <optgroup label="AI Chatbots" style="background:rgb(15 23 42)">
+                    <option value="chatgpt">ChatGPT</option>
+                    <option value="perplexity">Perplexity AI</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="copilot">Microsoft Copilot</option>
+                    <option value="grok">Grok</option>
+                  </optgroup>
+                  <optgroup label="Messengers" style="background:rgb(15 23 42)">
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="telegram">Telegram</option>
+                  </optgroup>
+                  <optgroup label="Other" style="background:rgb(15 23 42)">
+                    <option value="email">Email</option>
+                    <option value="direct">Direct</option>
+                    <option value="referral">Referral</option>
+                  </optgroup>
+                </select>
+                <input type="number" :name="'source_percents'" x-model.number="s.pct"
+                  min="0" max="100"
+                  style="width:3.5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.25rem;color:#fff;font-size:0.75rem;outline:none;text-align:center;"/>
+                <span class="text-xs text-slate-500">%</span>
+                <button type="button" @click="sources.splice(i,1)" class="text-slate-500 hover:text-red-400 text-xs">✕</button>
+              </div>
+            </template>
           </div>
         </div>
 
         <!-- Geo -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <h3 class="font-semibold text-white text-sm mb-3">Гео</h3>
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5" x-data="geoForm()">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-white text-sm">Гео</h3>
+            <button type="button" @click="rows.push({country:'DE',percent:0})" class="text-xs text-blue-400 hover:text-blue-300">+ Страна</button>
+          </div>
           <div class="space-y-2">
-            {% for code, pct in project.geo.items() %}
-            <div class="flex items-center gap-2">
-              <select name="geo_countries" class="input-field flex-1" style="padding: 0.375rem 0.5rem; font-size: 0.75rem;">
-                {% for c, n in countries %}
-                <option value="{{ c }}" {% if c == code %}selected{% endif %}>{{ n }}</option>
-                {% endfor %}
-              </select>
-              <input type="number" name="geo_percents" value="{{ pct }}" min="0" max="100"
-                class="input-field w-14 text-center" style="padding: 0.375rem 0.5rem; font-size: 0.75rem;"/>
-            </div>
-            {% endfor %}
+            <template x-for="(row,i) in rows" :key="i">
+              <div class="flex items-center gap-2">
+                <select :name="'geo_countries'" x-model="row.country"
+                  style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.5rem;color:#fff;font-size:0.75rem;outline:none;">
+                  {% for c, n in countries %}
+                  <option value="{{ c }}" style="background:rgb(15 23 42)">{{ n }}</option>
+                  {% endfor %}
+                </select>
+                <input type="number" :name="'geo_percents'" x-model.number="row.percent"
+                  min="0" max="100"
+                  style="width:3.5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.25rem;color:#fff;font-size:0.75rem;outline:none;text-align:center;"/>
+                <button type="button" @click="rows.splice(i,1)" class="text-slate-500 hover:text-red-400 text-xs">✕</button>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -198,13 +258,18 @@ async function sendNow() {
 
 function settingsForm() {
   return {
-    src: {
-      organic: {{ project.sources.get('organic', 0) }},
-      social:  {{ project.sources.get('social', 0) }},
-      direct:  {{ project.sources.get('direct', 0) }},
-      referral:{{ project.sources.get('referral', 0) }},
-    },
-    get srcTotal() { return Object.values(this.src).reduce((a,b)=>a+b,0) }
+    device: '{{ project.device or "desktop" }}',
+    sources: {{ project.sources | tojson }}.length !== undefined
+      ? Object.entries({{ project.sources | tojson }}).map(([k,v]) => ({key:k, pct:v}))
+      : Object.entries({{ project.sources | tojson }}).map(([k,v]) => ({key:k, pct:v})),
+    get srcTotal() { return this.sources.reduce((a,s)=>a+s.pct,0) },
+    addSrc() { this.sources.push({key:'google_organic', pct:0}) },
+  }
+}
+
+function geoForm() {
+  return {
+    rows: Object.entries({{ project.geo | tojson }}).map(([c,p]) => ({country:c, percent:p})),
   }
 }
 </script>

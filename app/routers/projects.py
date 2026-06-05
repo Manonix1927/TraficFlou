@@ -166,10 +166,9 @@ def update_project(
     request: Request,
     name: str = Form(...),
     daily_hits: int = Form(100),
-    sources_organic: int = Form(40),
-    sources_social: int = Form(25),
-    sources_direct: int = Form(20),
-    sources_referral: int = Form(15),
+    device: str = Form("desktop"),
+    source_keys: list = Form(...),
+    source_percents: list = Form(...),
     geo_countries: list = Form(...),
     geo_percents: list = Form(...),
     db: Session = Depends(get_db),
@@ -183,10 +182,8 @@ def update_project(
 
     project.name = name
     project.daily_hits = daily_hits
-    project.sources = {
-        "organic": sources_organic, "social": sources_social,
-        "direct": sources_direct, "referral": sources_referral,
-    }
+    project.device = device
+    project.sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     project.geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
     db.commit()
     return RedirectResponse(f"/projects/{project_id}", status_code=302)
