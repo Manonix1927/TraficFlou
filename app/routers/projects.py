@@ -16,6 +16,21 @@ from app.core.gcollect import send_hit, pick_weighted
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
+SOURCE_LABELS = {
+    "google_organic": "Google Organic", "bing_organic": "Bing Organic",
+    "duckduckgo_organic": "DuckDuckGo", "yahoo_organic": "Yahoo",
+    "youtube_organic": "YouTube", "google_cpc": "Google Ads",
+    "instagram": "Instagram", "facebook": "Facebook",
+    "linkedin": "LinkedIn", "twitter": "Twitter / X",
+    "pinterest": "Pinterest", "tiktok": "TikTok",
+    "chatgpt": "ChatGPT", "perplexity": "Perplexity AI",
+    "gemini": "Gemini", "copilot": "Copilot", "grok": "Grok",
+    "whatsapp": "WhatsApp", "telegram": "Telegram",
+    "email": "Email", "direct": "Direct", "referral": "Referral",
+    # legacy keys
+    "organic": "Google Organic", "social": "Social", "cpc": "Google Ads",
+}
+
 COUNTRIES = [
     ("UA", "Ukraine"), ("DE", "Germany"), ("PL", "Poland"), ("FR", "France"),
     ("IT", "Italy"), ("ES", "Spain"), ("CZ", "Czech Republic"), ("SK", "Slovakia"),
@@ -131,11 +146,17 @@ def project_detail(
         .group_by(models.HitLog.source).all()
     )
 
+    # Map source keys to readable labels
+    stats_source_labeled = [
+        (SOURCE_LABELS.get(src, src), count)
+        for src, count in stats_source
+    ]
+
     return templates.TemplateResponse("project_detail.html", {
         "request": request, "user": user, "project": project,
         "countries": COUNTRIES,
         "stats_country": stats_country,
-        "stats_source": stats_source,
+        "stats_source": stats_source_labeled,
     })
 
 
