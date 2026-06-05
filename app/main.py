@@ -13,22 +13,9 @@ Base.metadata.create_all(bind=engine)
 def run_migrations():
     migrations = [
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS gtm_id VARCHAR",
-        # Convert device string → JSON (safe: only runs if column exists as varchar)
-        """DO $$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='projects' AND column_name='device'
-            AND data_type IN ('character varying','text','character')
-          ) THEN
-            ALTER TABLE projects ALTER COLUMN device TYPE JSONB USING
-              CASE device
-                WHEN 'mobile' THEN '{\"mobile\":100}'::jsonb
-                WHEN 'mixed'  THEN '{\"desktop\":50,\"mobile\":50}'::jsonb
-                ELSE '{\"desktop\":100}'::jsonb
-              END;
-          END IF;
-        END $$""",
+        # Safe: try to convert device column string → jsonb, ignore errors
+        """UPDATE projects SET device = '{\"desktop\":100}'
+           WHERE device IS NULL OR device::text NOT LIKE '{%'""",
     ]
     with engine.connect() as conn:
         for sql in migrations:

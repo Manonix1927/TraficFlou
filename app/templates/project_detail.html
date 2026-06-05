@@ -261,31 +261,43 @@ async function sendNow() {
 function projectDetail() { return {} }
 
 function sourcesForm() {
-  const raw = {{ project.sources | tojson }};
+  let raw = {};
+  try { raw = {{ (project.sources or {})|tojson }}; } catch(e) {}
+  if (!raw || typeof raw !== 'object') raw = { google_organic: 100 };
   return {
-    sources: Object.entries(raw).map(([k,v]) => ({key:k, pct:v})),
+    sources: Object.entries(raw).map(([k,v]) => ({key:k, pct: Number(v)||0})),
     get total() { return this.sources.reduce((a,s)=>a+s.pct,0) },
     add() { this.sources.push({key:'google_organic', pct:0}) },
   }
 }
 
 function deviceForm() {
-  const raw = {{ project.device | tojson if project.device is mapping else '{"desktop":100}' }};
-  const devMap = typeof raw === 'object' ? raw : { desktop: 100 };
+  let devMap = { desktop: 100, mobile: 0, tablet: 0 };
+  try {
+    {% if project.device is mapping %}
+      devMap = {{ project.device | tojson }};
+    {% elif project.device == 'mobile' %}
+      devMap = { desktop: 0, mobile: 100, tablet: 0 };
+    {% elif project.device == 'mixed' %}
+      devMap = { desktop: 50, mobile: 50, tablet: 0 };
+    {% endif %}
+  } catch(e) {}
   return {
     devices: [
-      { key: 'desktop', icon: '🖥', label: 'Desktop', pct: devMap.desktop || 0 },
-      { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: devMap.mobile  || 0 },
-      { key: 'tablet',  icon: '🖥', label: 'Tablet',  pct: devMap.tablet  || 0 },
+      { key: 'desktop', icon: '🖥', label: 'Desktop', pct: Number(devMap.desktop)||0 },
+      { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: Number(devMap.mobile) ||0 },
+      { key: 'tablet',  icon: '📟', label: 'Tablet',  pct: Number(devMap.tablet) ||0 },
     ],
     get devTotal() { return this.devices.reduce((a,d)=>a+d.pct,0) },
   }
 }
 
 function geoForm() {
-  const raw = {{ project.geo | tojson }};
+  let raw = {};
+  try { raw = {{ (project.geo or {})|tojson }}; } catch(e) {}
+  if (!raw || typeof raw !== 'object') raw = { UA: 100 };
   return {
-    rows: Object.entries(raw).map(([c,p]) => ({country:c, percent:p})),
+    rows: Object.entries(raw).map(([c,p]) => ({country:c, percent: Number(p)||0})),
     get geoTotal() { return this.rows.reduce((a,r)=>a+r.percent,0) },
   }
 }
