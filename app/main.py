@@ -4,7 +4,7 @@ load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from app.database import Base, engine
-from app.routers import auth, projects
+from app.routers import auth, projects, admin
 from sqlalchemy import text
 
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,7 @@ app = FastAPI(title="TrafficFlow")
 
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
