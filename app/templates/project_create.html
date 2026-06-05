@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Новый проект — TrafficFlow{% endblock %}
+{% block content %}
+<div class="p-8 max-w-3xl">
+  <div class="mb-8">
+    <a href="/dashboard" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 mb-4">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Назад
+    </a>
+    <h1 class="text-2xl font-bold text-white">Новый проект</h1>
+    <p class="text-slate-400 text-sm mt-1">Настройте параметры трафика для вашего сайта</p>
+  </div>
+
+  <form method="post" action="/projects/create" x-data="projectForm()" class="space-y-6">
+
+    <!-- Basic info -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 space-y-4">
+      <h2 class="font-semibold text-white">Основная информация</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-slate-400 mb-1.5">Название проекта</label>
+          <input name="name" required placeholder="Мой сайт" class="input-field"/>
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1.5">URL сайта</label>
+          <input name="site_url" required placeholder="https://example.com" class="input-field"/>
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1.5">GA4 Measurement ID</label>
+          <input name="ga_tid" required placeholder="G-XXXXXXXXXX" class="input-field"/>
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
+          <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Traffic volume -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+      <h2 class="font-semibold text-white mb-4">Объём трафика</h2>
+      <div class="flex items-center gap-4">
+        <div class="flex-1">
+          <label class="block text-sm text-slate-400 mb-1.5">Хитов в день</label>
+          <input name="daily_hits" type="number" value="100" min="10" max="10000" class="input-field" x-model="dailyHits"/>
+        </div>
+        <div class="flex-1 bg-slate-900 rounded-lg p-4 text-center">
+          <p class="text-xs text-slate-400 mb-1">Расход кредитов</p>
+          <p class="text-2xl font-bold text-blue-400" x-text="dailyHits"></p>
+          <p class="text-xs text-slate-500">в день</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Traffic sources -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="sourcesForm()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-white">Источники трафика</h2>
+        <span class="text-sm" :class="total === 100 ? 'text-green-400' : 'text-red-400'">
+          Итого: <span x-text="total"></span>%
+        </span>
+      </div>
+      <div class="space-y-3">
+        <template x-for="src in sources" :key="src.key">
+          <div class="flex items-center gap-4">
+            <div class="w-28 text-sm text-slate-300" x-text="src.label"></div>
+            <input type="hidden" :name="'sources_' + src.key" :value="src.value"/>
+            <input type="range" min="0" max="100" x-model.number="src.value" @input="sync(src)"
+              class="flex-1 accent-blue-500"/>
+            <div class="w-12 text-right text-sm font-semibold text-white" x-text="src.value + '%'"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Geo targeting -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="geoForm()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-white">Гео-таргетинг</h2>
+        <button type="button" @click="addRow()"
+          class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Добавить страну
+        </button>
+      </div>
+      <div class="space-y-2">
+        <template x-for="(row, i) in rows" :key="i">
+          <div class="flex items-center gap-3">
+            <select :name="'geo_countries'" x-model="row.country"
+              style="flex:1; background-color:rgb(15 23 42); border:1px solid rgb(71 85 105); border-radius:0.5rem; padding:0.625rem 1rem; color:#fff; font-size:0.875rem; outline:none; min-width:0;">
+              {% for code, name in countries %}
+              <option value="{{ code }}" style="background:rgb(15 23 42);color:#fff;">{{ name }}</option>
+              {% endfor %}
+            </select>
+            <input type="number" :name="'geo_percents'" x-model.number="row.percent"
+              min="0" max="100" placeholder="%"
+              style="width:5rem; background-color:rgb(15 23 42); border:1px solid rgb(71 85 105); border-radius:0.5rem; padding:0.625rem 0.5rem; color:#fff; font-size:0.875rem; outline:none; text-align:center;"/>
+            <button type="button" @click="rows.splice(i,1)" class="text-slate-500 hover:text-red-400 transition" style="flex-shrink:0;">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </template>
+      </div>
+      <p class="text-xs text-slate-500 mt-3">Сумма процентов должна быть 100%</p>
+    </div>
+
+    <button type="submit"
+      class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition">
+      Создать проект
+    </button>
+  </form>
+</div>
+
+<style>
+  .input-field {
+    width: 100%;
+    background-color: rgb(15 23 42);
+    border: 1px solid rgb(71 85 105);
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+    color: #fff;
+    font-size: 0.875rem;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .input-field:focus {
+    border-color: rgb(59 130 246);
+    box-shadow: 0 0 0 1px rgb(59 130 246);
+  }
+  .input-field option {
+    background-color: rgb(15 23 42);
+    color: #fff;
+  }
+</style>
+
+<script>
+function projectForm() { return { dailyHits: 100 } }
+
+function sourcesForm() {
+  return {
+    sources: [
+      { key: 'organic', label: 'Organic Search', value: 40 },
+      { key: 'social',  label: 'Social',         value: 25 },
+      { key: 'direct',  label: 'Direct',          value: 20 },
+      { key: 'referral',label: 'Referral',        value: 15 },
+    ],
+    get total() { return this.sources.reduce((s,x) => s + x.value, 0) },
+    sync(changed) {
+      // Adjust to keep total ≤ 100
+    }
+  }
+}
+
+function geoForm() {
+  return {
+    rows: [{ country: 'UA', percent: 100 }],
+    addRow() { this.rows.push({ country: 'DE', percent: 0 }) }
+  }
+}
+</script>
+{% endblock %}

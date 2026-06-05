@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — TrafficFlow{% endblock %}
+{% block content %}
+<div class="p-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <a href="/dashboard" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 mb-3">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Все проекты
+      </a>
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full {% if project.status == 'active' %}bg-green-400 shadow-lg shadow-green-400/50{% else %}bg-slate-500{% endif %}"></div>
+        <h1 class="text-2xl font-bold text-white">{{ project.name }}</h1>
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium
+          {% if project.status == 'active' %}bg-green-900/50 text-green-400 border border-green-700
+          {% else %}bg-slate-700 text-slate-300 border border-slate-600{% endif %}">
+          {% if project.status == 'active' %}Активен{% else %}Пауза{% endif %}
+        </span>
+      </div>
+      <p class="text-slate-400 text-sm mt-1">{{ project.site_url }}</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Send now button -->
+      <button id="sendNowBtn" onclick="sendNow()"
+        class="px-5 py-2.5 rounded-xl font-semibold text-sm transition bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span id="sendNowLabel">Отправить сейчас</span>
+      </button>
+      <!-- Toggle button -->
+      <form method="post" action="/projects/{{ project.id }}/toggle">
+        <button type="submit"
+          class="px-6 py-2.5 rounded-xl font-semibold text-sm transition
+            {% if project.status == 'active' %}
+              bg-slate-700 hover:bg-slate-600 text-white
+            {% else %}
+              bg-green-600 hover:bg-green-500 text-white
+            {% endif %}">
+          {% if project.status == 'active' %}⏸ Пауза{% else %}▶ Запустить{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">Отправлено хитов</p>
+      <p class="text-3xl font-bold text-white mt-2">{{ project.hits_sent }}</p>
+    </div>
+    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">В день (план)</p>
+      <p class="text-3xl font-bold text-white mt-2">{{ project.daily_hits }}</p>
+    </div>
+    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">Баланс кредитов</p>
+      <p class="text-3xl font-bold {% if user.credits > 100 %}text-white{% else %}text-red-400{% endif %} mt-2">{{ user.credits }}</p>
+    </div>
+    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">GA4 ID</p>
+      <p class="text-lg font-mono font-bold text-blue-400 mt-2">{{ project.ga_tid }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-6">
+    <!-- Stats charts -->
+    <div class="col-span-2 space-y-4">
+
+      <!-- By country -->
+      <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+        <h2 class="font-semibold text-white mb-4">По странам (24ч)</h2>
+        {% if stats_country %}
+        <div class="space-y-2">
+          {% set max_hits = stats_country | map(attribute=1) | max %}
+          {% for country, count in stats_country %}
+          <div class="flex items-center gap-3">
+            <div class="w-8 text-xs text-slate-400 font-mono">{{ country }}</div>
+            <div class="flex-1 bg-slate-700 rounded-full h-2">
+              <div class="bg-blue-500 h-2 rounded-full" style="width: {{ (count / max_hits * 100)|int }}%"></div>
+            </div>
+            <div class="w-10 text-right text-sm text-white font-medium">{{ count }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-sm">Нет данных за последние 24 часа</p>
+        {% endif %}
+      </div>
+
+      <!-- By source -->
+      <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+        <h2 class="font-semibold text-white mb-4">По источникам (24ч)</h2>
+        {% if stats_source %}
+        <div class="space-y-2">
+          {% set max_src = stats_source | map(attribute=1) | max %}
+          {% for source, count in stats_source %}
+          <div class="flex items-center gap-3">
+            <div class="w-20 text-xs text-slate-400 capitalize">{{ source }}</div>
+            <div class="flex-1 bg-slate-700 rounded-full h-2">
+              <div class="bg-purple-500 h-2 rounded-full" style="width: {{ (count / max_src * 100)|int }}%"></div>
+            </div>
+            <div class="w-10 text-right text-sm text-white font-medium">{{ count }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-sm">Нет данных за последние 24 часа</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Settings panel -->
+    <div class="space-y-4">
+      <form method="post" action="/projects/{{ project.id }}/update" x-data="settingsForm()" class="space-y-4">
+
+        <!-- Sources -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-white text-sm">Источники</h3>
+            <span class="text-xs" :class="srcTotal===100?'text-green-400':'text-red-400'">
+              <span x-text="srcTotal"></span>%
+            </span>
+          </div>
+          <input type="hidden" name="name" value="{{ project.name }}"/>
+          <input type="hidden" name="daily_hits" value="{{ project.daily_hits }}"/>
+          <div class="space-y-2.5">
+            {% for key, label in [('organic','Organic'),('social','Social'),('direct','Direct'),('referral','Referral')] %}
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 w-16">{{ label }}</span>
+              <input type="range" name="sources_{{ key }}" min="0" max="100"
+                value="{{ project.sources.get(key, 0) }}"
+                x-model.number="src.{{ key }}"
+                class="flex-1 accent-blue-500"/>
+              <span class="text-xs text-white w-8 text-right" x-text="src.{{ key }}+'%'"></span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Geo -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <h3 class="font-semibold text-white text-sm mb-3">Гео</h3>
+          <div class="space-y-2">
+            {% for code, pct in project.geo.items() %}
+            <div class="flex items-center gap-2">
+              <select name="geo_countries" class="input-field flex-1" style="padding: 0.375rem 0.5rem; font-size: 0.75rem;">
+                {% for c, n in countries %}
+                <option value="{{ c }}" {% if c == code %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+              </select>
+              <input type="number" name="geo_percents" value="{{ pct }}" min="0" max="100"
+                class="input-field w-14 text-center" style="padding: 0.375rem 0.5rem; font-size: 0.75rem;"/>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit"
+          class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-xl text-sm font-medium transition">
+          Сохранить настройки
+        </button>
+      </form>
+
+      <!-- Delete -->
+      <form method="post" action="/projects/{{ project.id }}/delete"
+        onsubmit="return confirm('Удалить проект? Это действие необратимо.')">
+        <button type="submit"
+          class="w-full bg-transparent hover:bg-red-900/20 border border-red-800 text-red-400 hover:text-red-300 py-2.5 rounded-xl text-sm font-medium transition">
+          Удалить проект
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+async function sendNow() {
+  const btn = document.getElementById('sendNowBtn');
+  const label = document.getElementById('sendNowLabel');
+  btn.disabled = true;
+  label.textContent = 'Отправляем...';
+  try {
+    const r = await fetch('/projects/{{ project.id }}/send-now', { method: 'POST' });
+    const data = await r.json();
+    if (data.ok) {
+      label.textContent = '✓ Отправлено ' + data.count + ' хитов';
+      setTimeout(() => { location.reload(); }, 2000);
+    } else {
+      label.textContent = 'Ошибка';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    label.textContent = 'Ошибка';
+    btn.disabled = false;
+  }
+}
+
+function settingsForm() {
+  return {
+    src: {
+      organic: {{ project.sources.get('organic', 0) }},
+      social:  {{ project.sources.get('social', 0) }},
+      direct:  {{ project.sources.get('direct', 0) }},
+      referral:{{ project.sources.get('referral', 0) }},
+    },
+    get srcTotal() { return Object.values(this.src).reduce((a,b)=>a+b,0) }
+  }
+}
+</script>
+{% endblock %}
