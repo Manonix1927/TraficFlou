@@ -48,9 +48,11 @@ SOURCE_MEDIUMS = {
 def get_proxy(country_code: str) -> dict:
     if not PROXY_PASS:
         return None
+    from urllib.parse import quote
     cc = country_code.lower()
-    user = "user-" + PROXY_USER + "-country-" + cc
-    url = "http://" + user + ":" + PROXY_PASS + "@" + PROXY_HOST + ":" + PROXY_PORT
+    user = quote("user-" + PROXY_USER + "-country-" + cc, safe="")
+    password = quote(PROXY_PASS, safe="")
+    url = "http://" + user + ":" + password + "@" + PROXY_HOST + ":" + PROXY_PORT
     return {"http": url, "https": url}
 
 
