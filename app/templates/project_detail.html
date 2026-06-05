@@ -121,9 +121,9 @@
         </div>
       </div>
       <div class="space-y-3">
-        <template x-for="(s, i) in sources" :key="i">
+        <template x-for="(s, i) in items" :key="i">
           <div class="flex items-center gap-4">
-            <select x-model="s.key" :name="'source_keys'"
+            <select x-model="s.key" name="source_keys"
               style="width:13rem;flex-shrink:0;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
               <optgroup label="Organic Search" style="background:rgb(15 23 42)">
                 <option value="google_organic">Google Organic</option>
@@ -160,10 +160,11 @@
                 <option value="referral">Referral</option>
               </optgroup>
             </select>
-            <input type="range" min="0" max="100" x-model.number="s.pct" :name="'source_percents'"
+            <input type="range" min="0" max="100" x-model.number="s.pct" name="source_percents"
+              @input="slide(i)"
               class="flex-1 accent-blue-500"/>
             <span class="text-sm font-semibold text-white w-10 text-right" x-text="s.pct+'%'"></span>
-            <button type="button" @click="sources.splice(i,1)"
+            <button type="button" @click="remove(i)"
               class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
           </div>
         </template>
@@ -174,18 +175,19 @@
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="deviceForm()">
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-white">Тип устройства</h2>
-        <span class="text-sm font-semibold" :class="devTotal===100?'text-green-400':'text-red-400'">
-          <span x-text="devTotal"></span>%
+        <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
+          <span x-text="total"></span>%
         </span>
       </div>
       <div class="space-y-3">
-        <template x-for="d in devices" :key="d.key">
+        <template x-for="(d, i) in items" :key="d.key">
           <div class="flex items-center gap-4">
             <div class="flex items-center gap-2 w-32 flex-shrink-0">
               <span x-text="d.icon" class="text-lg"></span>
               <span class="text-sm text-slate-300" x-text="d.label"></span>
             </div>
             <input type="range" min="0" max="100" x-model.number="d.pct" :name="'device_' + d.key"
+              @input="slide(i)"
               class="flex-1 accent-green-500"/>
             <span class="text-sm font-semibold text-white w-10 text-right" x-text="d.pct+'%'"></span>
           </div>
@@ -198,28 +200,29 @@
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-white">Гео-таргетинг</h2>
         <div class="flex items-center gap-3">
-          <span class="text-sm font-semibold" :class="geoTotal===100?'text-green-400':'text-red-400'">
-            <span x-text="geoTotal"></span>%
+          <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
+            <span x-text="total"></span>%
           </span>
-          <button type="button" @click="rows.push({country:'DE',percent:0})"
+          <button type="button" @click="addRow()"
             class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">
             + Страна
           </button>
         </div>
       </div>
       <div class="space-y-3">
-        <template x-for="(row,i) in rows" :key="i">
+        <template x-for="(row, i) in items" :key="i">
           <div class="flex items-center gap-4">
-            <select x-model="row.country" :name="'geo_countries'"
+            <select x-model="row.country" name="geo_countries"
               style="width:13rem;flex-shrink:0;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
               {% for code, name in countries %}
               <option value="{{ code }}" style="background:rgb(15 23 42)">{{ name }}</option>
               {% endfor %}
             </select>
-            <input type="range" min="0" max="100" x-model.number="row.percent" :name="'geo_percents'"
+            <input type="range" min="0" max="100" x-model.number="row.pct" name="geo_percents"
+              @input="slide(i)"
               class="flex-1 accent-purple-500"/>
-            <span class="text-sm font-semibold text-white w-10 text-right" x-text="row.percent+'%'"></span>
-            <button type="button" @click="rows.splice(i,1)"
+            <span class="text-sm font-semibold text-white w-10 text-right" x-text="row.pct+'%'"></span>
+            <button type="button" @click="remove(i)"
               class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
           </div>
         </template>
@@ -258,48 +261,102 @@ async function sendNow() {
   } catch(e) { label.textContent = 'Ошибка'; btn.disabled = false; }
 }
 
-function projectDetail() { return {} }
+// ── Linked sliders: moving one redistributes the rest, sum stays 100 ──────
+function makeLinked(items) {
+  return {
+    items,
+    get total() { return this.items.reduce((a, b) => a + (b.pct || 0), 0); },
 
+    slide(idx) {
+      // clamp the moved slider to [0, 100]
+      const val = Math.max(0, Math.min(100, this.items[idx].pct || 0));
+      this.items[idx].pct = val;
+
+      const rest = 100 - val;
+      const others = this.items.filter((_, i) => i !== idx);
+      if (!others.length) return;
+
+      const othersSum = others.reduce((a, b) => a + (b.pct || 0), 0);
+
+      if (othersSum === 0) {
+        // distribute evenly when all others are 0
+        const share = Math.floor(rest / others.length);
+        others.forEach((it, j) => {
+          it.pct = share + (j === 0 ? rest - share * others.length : 0);
+        });
+      } else {
+        // distribute proportionally, last one absorbs rounding error
+        let alloc = 0;
+        others.forEach((it, j) => {
+          if (j === others.length - 1) {
+            it.pct = Math.max(0, rest - alloc);
+          } else {
+            it.pct = Math.max(0, Math.round(it.pct / othersSum * rest));
+            alloc += it.pct;
+          }
+        });
+      }
+    },
+
+    remove(idx) {
+      this.items.splice(idx, 1);
+      if (!this.items.length) return;
+      const t = this.total;
+      if (t === 100) return;
+      if (t === 0) { this.items[0].pct = 100; return; }
+      // re-normalize to 100
+      let alloc = 0;
+      this.items.forEach((it, i) => {
+        if (i === this.items.length - 1) {
+          it.pct = Math.max(0, 100 - alloc);
+        } else {
+          it.pct = Math.max(0, Math.round(it.pct / t * 100));
+          alloc += it.pct;
+        }
+      });
+    }
+  };
+}
+
+// ── Sources ──────────────────────────────────────────────────
 function sourcesForm() {
   let raw = {};
   try { raw = {{ (project.sources or {})|tojson }}; } catch(e) {}
-  if (!raw || typeof raw !== 'object') raw = { google_organic: 100 };
-  return {
-    sources: Object.entries(raw).map(([k,v]) => ({key:k, pct: Number(v)||0})),
-    get total() { return this.sources.reduce((a,s)=>a+s.pct,0) },
-    add() { this.sources.push({key:'google_organic', pct:0}) },
-  }
+  if (!raw || typeof raw !== 'object' || !Object.keys(raw).length) raw = { google_organic: 100 };
+  const base = makeLinked(Object.entries(raw).map(([k, v]) => ({ key: k, pct: Number(v) || 0 })));
+  return Object.assign(base, {
+    add() { this.items.push({ key: 'google_organic', pct: 0 }); }
+  });
 }
 
+// ── Device ───────────────────────────────────────────────────
 function deviceForm() {
-  let devMap = { desktop: 100, mobile: 0, tablet: 0 };
+  let dm = { desktop: 100, mobile: 0, tablet: 0 };
   try {
     {% if project.device is mapping %}
-      devMap = {{ project.device | tojson }};
+      dm = {{ project.device|tojson }};
     {% elif project.device == 'mobile' %}
-      devMap = { desktop: 0, mobile: 100, tablet: 0 };
+      dm = { desktop: 0, mobile: 100, tablet: 0 };
     {% elif project.device == 'mixed' %}
-      devMap = { desktop: 50, mobile: 50, tablet: 0 };
+      dm = { desktop: 50, mobile: 50, tablet: 0 };
     {% endif %}
   } catch(e) {}
-  return {
-    devices: [
-      { key: 'desktop', icon: '🖥', label: 'Desktop', pct: Number(devMap.desktop)||0 },
-      { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: Number(devMap.mobile) ||0 },
-      { key: 'tablet',  icon: '📟', label: 'Tablet',  pct: Number(devMap.tablet) ||0 },
-    ],
-    get devTotal() { return this.devices.reduce((a,d)=>a+d.pct,0) },
-  }
+  return makeLinked([
+    { key: 'desktop', icon: '🖥', label: 'Desktop', pct: Number(dm.desktop) || 0 },
+    { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: Number(dm.mobile)  || 0 },
+    { key: 'tablet',  icon: '📟', label: 'Tablet',  pct: Number(dm.tablet)  || 0 },
+  ]);
 }
 
+// ── Geo ──────────────────────────────────────────────────────
 function geoForm() {
   let raw = {};
   try { raw = {{ (project.geo or {})|tojson }}; } catch(e) {}
-  if (!raw || typeof raw !== 'object') raw = { UA: 100 };
-  return {
-    rows: Object.entries(raw).map(([c,p]) => ({country:c, percent: Number(p)||0})),
-    get geoTotal() { return this.rows.reduce((a,r)=>a+r.percent,0) },
-  }
+  if (!raw || typeof raw !== 'object' || !Object.keys(raw).length) raw = { UA: 100 };
+  const base = makeLinked(Object.entries(raw).map(([c, p]) => ({ country: c, pct: Number(p) || 0 })));
+  return Object.assign(base, {
+    addRow() { this.items.push({ country: 'DE', pct: 0 }); }
+  });
 }
 </script>
 {% endblock %}
