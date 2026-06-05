@@ -84,7 +84,12 @@ def send_project_hits(
 
         # Генерируем задания
         def pick_device(d):
-            return random.choice(["desktop", "mobile"]) if d == "mixed" else d
+            if isinstance(d, dict) and d:
+                return pick_weighted(d)
+            # legacy string format
+            if d == "mixed":
+                return random.choice(["desktop", "mobile", "tablet"])
+            return d if d in ("desktop", "mobile", "tablet") else "desktop"
 
         jobs = []
         for _ in range(hits_count):

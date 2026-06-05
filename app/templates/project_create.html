@@ -44,15 +44,18 @@
           <label class="block text-sm text-slate-400 mb-1.5">Хитов в день</label>
           <input name="daily_hits" type="number" value="100" min="10" max="100000" class="input-field" x-model="dailyHits"/>
         </div>
-        <div class="col-span-2">
-          <label class="block text-sm text-slate-400 mb-1.5">Тип устройства</label>
-          <div class="flex gap-2">
+        <div class="col-span-2" x-data="deviceForm()">
+          <label class="block text-sm text-slate-400 mb-1.5">
+            Тип устройства
+            <span class="ml-2 text-xs font-semibold" :class="devTotal===100?'text-green-400':'text-red-400'"><span x-text="devTotal"></span>%</span>
+          </label>
+          <div class="space-y-2">
             <template x-for="d in devices" :key="d.key">
-              <label :class="device===d.key ? 'border-blue-500 bg-blue-900/30 text-white' : 'border-slate-600 text-slate-400'"
-                style="flex:1;border:1px solid;border-radius:0.5rem;padding:0.6rem;text-align:center;cursor:pointer;font-size:0.8rem;transition:all 0.15s;">
-                <input type="radio" name="device" :value="d.key" x-model="device" class="hidden"/>
-                <span x-text="d.label"></span>
-              </label>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-slate-300 w-24 flex-shrink-0" x-text="d.icon+' '+d.label"></span>
+                <input type="range" min="0" max="100" x-model.number="d.pct" :name="'device_'+d.key" class="flex-1 accent-green-500"/>
+                <span class="text-sm font-semibold text-white w-10 text-right" x-text="d.pct+'%'"></span>
+              </div>
             </template>
           </div>
         </div>
@@ -170,14 +173,17 @@
 
 <script>
 function projectForm() {
+  return { dailyHits: 100 }
+}
+
+function deviceForm() {
   return {
-    dailyHits: 100,
-    device: 'desktop',
     devices: [
-      { key: 'desktop', label: '🖥 Desktop' },
-      { key: 'mobile',  label: '📱 Mobile' },
-      { key: 'mixed',   label: '🔀 Mixed' },
-    ]
+      { key: 'desktop', icon: '🖥', label: 'Desktop', pct: 100 },
+      { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: 0 },
+      { key: 'tablet',  icon: '📟', label: 'Tablet',  pct: 0 },
+    ],
+    get devTotal() { return this.devices.reduce((a,d)=>a+d.pct,0) },
   }
 }
 

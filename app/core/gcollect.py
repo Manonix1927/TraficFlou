@@ -86,6 +86,10 @@ DEVICE_PROFILES = {
         "ua": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.60 Mobile Safari/537.36",
         "sr": "390x844", "uaa": "arm", "uab": "64", "uap": "Android", "uapv": "14.0", "uamb": "1",
     },
+    "tablet": {
+        "ua": "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "sr": "820x1180", "uaa": "arm", "uab": "64", "uap": "iOS", "uapv": "17.0", "uamb": "1",
+    },
 }
 
 

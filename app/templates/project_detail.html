@@ -171,25 +171,25 @@
     </div>
 
     <!-- 3. Device -->
-    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
-      <h2 class="font-semibold text-white mb-4">Тип устройства</h2>
-      <div class="flex gap-3">
-        {% for dkey, dlabel, ddesc in [
-          ('desktop','🖥 Desktop','Windows Chrome'),
-          ('mobile','📱 Mobile','Android Chrome'),
-          ('mixed','🔀 Mixed','50/50 случайно')
-        ] %}
-        <label class="flex-1 border rounded-xl p-4 cursor-pointer transition text-center"
-          style="border-color: {% if (project.device or 'desktop') == dkey %}rgb(59 130 246){% else %}rgb(71 85 105){% endif %};
-                 background: {% if (project.device or 'desktop') == dkey %}rgba(30,58,138,0.3){% else %}transparent{% endif %};">
-          <input type="radio" name="device" value="{{ dkey }}"
-            {% if (project.device or 'desktop') == dkey %}checked{% endif %}
-            class="hidden"
-            onchange="this.closest('.flex').querySelectorAll('label').forEach(l=>l.style.borderColor='rgb(71 85 105)');this.closest('.flex').querySelectorAll('label').forEach(l=>l.style.background='transparent');this.closest('label').style.borderColor='rgb(59 130 246)';this.closest('label').style.background='rgba(30,58,138,0.3)'"/>
-          <p class="font-semibold text-white text-sm">{{ dlabel }}</p>
-          <p class="text-slate-400 text-xs mt-1">{{ ddesc }}</p>
-        </label>
-        {% endfor %}
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="deviceForm()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-white">Тип устройства</h2>
+        <span class="text-sm font-semibold" :class="devTotal===100?'text-green-400':'text-red-400'">
+          <span x-text="devTotal"></span>%
+        </span>
+      </div>
+      <div class="space-y-3">
+        <template x-for="d in devices" :key="d.key">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 w-32 flex-shrink-0">
+              <span x-text="d.icon" class="text-lg"></span>
+              <span class="text-sm text-slate-300" x-text="d.label"></span>
+            </div>
+            <input type="range" min="0" max="100" x-model.number="d.pct" :name="'device_' + d.key"
+              class="flex-1 accent-green-500"/>
+            <span class="text-sm font-semibold text-white w-10 text-right" x-text="d.pct+'%'"></span>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -266,6 +266,19 @@ function sourcesForm() {
     sources: Object.entries(raw).map(([k,v]) => ({key:k, pct:v})),
     get total() { return this.sources.reduce((a,s)=>a+s.pct,0) },
     add() { this.sources.push({key:'google_organic', pct:0}) },
+  }
+}
+
+function deviceForm() {
+  const raw = {{ project.device | tojson if project.device is mapping else '{"desktop":100}' }};
+  const devMap = typeof raw === 'object' ? raw : { desktop: 100 };
+  return {
+    devices: [
+      { key: 'desktop', icon: '🖥', label: 'Desktop', pct: devMap.desktop || 0 },
+      { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: devMap.mobile  || 0 },
+      { key: 'tablet',  icon: '🖥', label: 'Tablet',  pct: devMap.tablet  || 0 },
+    ],
+    get devTotal() { return this.devices.reduce((a,d)=>a+d.pct,0) },
   }
 }
 

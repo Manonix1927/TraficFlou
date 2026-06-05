@@ -87,7 +87,9 @@ def create_project(
     ga_tid: str = Form(...),
     gtm_id: str = Form(""),
     daily_hits: int = Form(100),
-    device: str = Form("desktop"),
+    device_desktop: int = Form(100),
+    device_mobile: int = Form(0),
+    device_tablet: int = Form(0),
     source_keys: list = Form(...),
     source_percents: list = Form(...),
     geo_countries: list = Form(...),
@@ -97,6 +99,9 @@ def create_project(
 ):
     sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
+    device = {k: v for k, v in [("desktop", device_desktop), ("mobile", device_mobile), ("tablet", device_tablet)] if v > 0}
+    if not device:
+        device = {"desktop": 100}
 
     project = models.Project(
         user_id=user.id,
@@ -190,7 +195,9 @@ def update_project(
     request: Request,
     name: str = Form(...),
     daily_hits: int = Form(100),
-    device: str = Form("desktop"),
+    device_desktop: int = Form(0),
+    device_mobile: int = Form(0),
+    device_tablet: int = Form(0),
     source_keys: list = Form(...),
     source_percents: list = Form(...),
     geo_countries: list = Form(...),
@@ -203,6 +210,10 @@ def update_project(
     ).first()
     if not project:
         raise HTTPException(404)
+
+    device = {k: v for k, v in [("desktop", device_desktop), ("mobile", device_mobile), ("tablet", device_tablet)] if v > 0}
+    if not device:
+        device = {"desktop": 100}
 
     project.name = name
     project.daily_hits = daily_hits
@@ -218,7 +229,12 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
     from app.database import SessionLocal
     db = SessionLocal()
     try:
-        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id) for _ in range(count)]
+        def pick_dev(d):
+            if isinstance(d, dict) and d:
+                return pick_weighted(d)
+            return "desktop"
+
+        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id, pick_dev(device)) for _ in range(count)]
         ok = 0
         logs = []
         with ThreadPoolExecutor(max_workers=10) as ex:
