@@ -96,13 +96,14 @@ def send_project_hits(
                 result = f.result()
                 if result["status"] == 204:
                     ok_count += 1
-                logs.append(models.HitLog(
-                    project_id=project_id,
-                    country=result.get("country"),
-                    source=result.get("source"),
-                    medium="organic",
-                    status=result.get("status", 0),
-                ))
+                    # Логируем только успешные хиты
+                    logs.append(models.HitLog(
+                        project_id=project_id,
+                        country=result.get("country"),
+                        source=result.get("source"),
+                        medium="organic",
+                        status=204,
+                    ))
 
         # Записываем логи пачкой
         db.bulk_save_objects(logs)

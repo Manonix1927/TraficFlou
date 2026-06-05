@@ -94,18 +94,21 @@ def project_detail(
     if not project:
         raise HTTPException(404)
 
-    # Статистика за последние 24ч
+    # Статистика за последние 24ч — только успешные хиты (status=204)
     from sqlalchemy import func
     from datetime import datetime, timedelta
     since = datetime.utcnow() - timedelta(hours=24)
+    base = db.query(models.HitLog).filter(
+        models.HitLog.project_id == project_id,
+        models.HitLog.created_at >= since,
+        models.HitLog.status == 204,
+    )
     stats_country = (
-        db.query(models.HitLog.country, func.count(models.HitLog.id))
-        .filter(models.HitLog.project_id == project_id, models.HitLog.created_at >= since)
+        base.with_entities(models.HitLog.country, func.count(models.HitLog.id))
         .group_by(models.HitLog.country).all()
     )
     stats_source = (
-        db.query(models.HitLog.source, func.count(models.HitLog.id))
-        .filter(models.HitLog.project_id == project_id, models.HitLog.created_at >= since)
+        base.with_entities(models.HitLog.source, func.count(models.HitLog.id))
         .group_by(models.HitLog.source).all()
     )
 
