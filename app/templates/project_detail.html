@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ project.name }} — TrafficFlow{% endblock %}
 {% block content %}
-<div class="p-8">
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-8">
+<div class="p-8" x-data="projectDetail()">
+
+  <!-- ── Header ── -->
+  <div class="flex items-center justify-between mb-6">
     <div>
       <a href="/dashboard" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 mb-3">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -18,258 +19,261 @@
           {% if project.status == 'active' %}Активен{% else %}Пауза{% endif %}
         </span>
       </div>
-      <p class="text-slate-400 text-sm mt-1">{{ project.site_url }}</p>
+      <p class="text-slate-400 text-sm mt-1">{{ project.site_url }} · <span class="text-blue-400 font-mono">{{ project.ga_tid }}</span></p>
     </div>
-
     <div class="flex items-center gap-3">
-      <!-- Send now button -->
       <button id="sendNowBtn" onclick="sendNow()"
-        class="px-5 py-2.5 rounded-xl font-semibold text-sm transition bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2">
+        class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 text-white transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         <span id="sendNowLabel">Отправить сейчас</span>
       </button>
-      <!-- Toggle button -->
       <form method="post" action="/projects/{{ project.id }}/toggle">
-        <button type="submit"
-          class="px-6 py-2.5 rounded-xl font-semibold text-sm transition
-            {% if project.status == 'active' %}
-              bg-slate-700 hover:bg-slate-600 text-white
-            {% else %}
-              bg-green-600 hover:bg-green-500 text-white
-            {% endif %}">
+        <button type="submit" class="px-5 py-2.5 rounded-xl font-semibold text-sm transition
+          {% if project.status == 'active' %}bg-slate-700 hover:bg-slate-600 text-white{% else %}bg-green-600 hover:bg-green-500 text-white{% endif %}">
           {% if project.status == 'active' %}⏸ Пауза{% else %}▶ Запустить{% endif %}
         </button>
       </form>
     </div>
   </div>
 
-  <!-- Stats row -->
-  <div class="grid grid-cols-4 gap-4 mb-8">
+  <!-- ── Top stats ── -->
+  <div class="grid grid-cols-4 gap-4 mb-6">
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">Отправлено хитов</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">Отправлено хитов</p>
       <p class="text-3xl font-bold text-white mt-2">{{ project.hits_sent }}</p>
     </div>
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">В день (план)</p>
-      <p class="text-3xl font-bold text-white mt-2">{{ project.daily_hits }}</p>
-    </div>
-    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">Баланс кредитов</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">Баланс кредитов</p>
       <p class="text-3xl font-bold {% if user.credits > 100 %}text-white{% else %}text-red-400{% endif %} mt-2">{{ user.credits }}</p>
     </div>
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs font-medium uppercase tracking-wide">GA4 ID</p>
-      <p class="text-lg font-mono font-bold text-blue-400 mt-2">{{ project.ga_tid }}</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">По странам (24ч)</p>
+      {% if stats_country %}
+        {% set max_c = stats_country | map(attribute=1) | max %}
+        {% for country, count in stats_country[:3] %}
+        <div class="flex items-center gap-2 mt-2">
+          <span class="text-xs text-slate-400 w-6">{{ country }}</span>
+          <div class="flex-1 bg-slate-700 rounded-full h-1.5">
+            <div class="bg-blue-500 h-1.5 rounded-full" style="width:{{ (count/max_c*100)|int }}%"></div>
+          </div>
+          <span class="text-xs text-white">{{ count }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-slate-500 text-xs mt-3">Нет данных</p>
+      {% endif %}
+    </div>
+    <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+      <p class="text-slate-400 text-xs uppercase tracking-wide">По источникам (24ч)</p>
+      {% if stats_source %}
+        {% set max_s = stats_source | map(attribute=1) | max %}
+        {% for source, count in stats_source[:3] %}
+        <div class="flex items-center gap-2 mt-2">
+          <span class="text-xs text-slate-400 w-14 truncate">{{ source }}</span>
+          <div class="flex-1 bg-slate-700 rounded-full h-1.5">
+            <div class="bg-purple-500 h-1.5 rounded-full" style="width:{{ (count/max_s*100)|int }}%"></div>
+          </div>
+          <span class="text-xs text-white">{{ count }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-slate-500 text-xs mt-3">Нет данных</p>
+      {% endif %}
     </div>
   </div>
 
-  <div class="grid grid-cols-3 gap-6">
-    <!-- Stats charts -->
-    <div class="col-span-2 space-y-4">
+  <!-- ── Settings form ── -->
+  <form method="post" action="/projects/{{ project.id }}/update" class="space-y-4">
+    <input type="hidden" name="name" value="{{ project.name }}"/>
 
-      <!-- By country -->
-      <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
-        <h2 class="font-semibold text-white mb-4">По странам (24ч)</h2>
-        {% if stats_country %}
-        <div class="space-y-2">
-          {% set max_hits = stats_country | map(attribute=1) | max %}
-          {% for country, count in stats_country %}
-          <div class="flex items-center gap-3">
-            <div class="w-8 text-xs text-slate-400 font-mono">{{ country }}</div>
-            <div class="flex-1 bg-slate-700 rounded-full h-2">
-              <div class="bg-blue-500 h-2 rounded-full" style="width: {{ (count / max_hits * 100)|int }}%"></div>
-            </div>
-            <div class="w-10 text-right text-sm text-white font-medium">{{ count }}</div>
-          </div>
-          {% endfor %}
+    <!-- 1. Traffic volume -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+      <h2 class="font-semibold text-white mb-4">Объём трафика</h2>
+      <div class="flex items-center gap-6">
+        <div class="flex-1">
+          <input type="range" name="daily_hits" min="10" max="10000" step="10"
+            value="{{ project.daily_hits }}"
+            class="w-full accent-blue-500"
+            oninput="document.getElementById('hits_val').textContent=this.value"/>
         </div>
-        {% else %}
-        <p class="text-slate-500 text-sm">Нет данных за последние 24 часа</p>
-        {% endif %}
+        <div class="text-center w-28">
+          <p class="text-3xl font-bold text-blue-400" id="hits_val">{{ project.daily_hits }}</p>
+          <p class="text-xs text-slate-400">хитов в день</p>
+        </div>
       </div>
-
-      <!-- By source -->
-      <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
-        <h2 class="font-semibold text-white mb-4">По источникам (24ч)</h2>
-        {% if stats_source %}
-        <div class="space-y-2">
-          {% set max_src = stats_source | map(attribute=1) | max %}
-          {% for source, count in stats_source %}
-          <div class="flex items-center gap-3">
-            <div class="w-20 text-xs text-slate-400 capitalize">{{ source }}</div>
-            <div class="flex-1 bg-slate-700 rounded-full h-2">
-              <div class="bg-purple-500 h-2 rounded-full" style="width: {{ (count / max_src * 100)|int }}%"></div>
-            </div>
-            <div class="w-10 text-right text-sm text-white font-medium">{{ count }}</div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <p class="text-slate-500 text-sm">Нет данных за последние 24 часа</p>
-        {% endif %}
+      <div class="flex justify-between text-xs text-slate-500 mt-1">
+        <span>10</span><span>2 500</span><span>5 000</span><span>7 500</span><span>10 000</span>
       </div>
     </div>
 
-    <!-- Settings panel -->
-    <div class="space-y-4">
-      <form method="post" action="/projects/{{ project.id }}/update"
-            x-data="settingsForm()" class="space-y-4">
-
-        <input type="hidden" name="name" value="{{ project.name }}"/>
-        <input type="hidden" name="daily_hits" value="{{ project.daily_hits }}"/>
-
-        <!-- Device -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <h3 class="font-semibold text-white text-sm mb-3">Устройство</h3>
-          <div class="flex gap-2">
-            {% for dkey, dlabel in [('desktop','🖥 Desktop'),('mobile','📱 Mobile'),('mixed','🔀 Mixed')] %}
-            <label style="flex:1;border:1px solid;border-radius:0.5rem;padding:0.5rem;text-align:center;cursor:pointer;font-size:0.75rem;transition:all 0.15s;"
-              :class="device==='{{ dkey }}' ? 'border-blue-500 bg-blue-900/30 color:#fff' : 'border-slate-600 color:rgb(148 163 184)'"
-              :style="device==='{{ dkey }}' ? 'border-color:rgb(59 130 246);background:rgba(30,58,138,0.3);color:#fff' : 'border-color:rgb(71 85 105);color:rgb(148 163 184)'">
-              <input type="radio" name="device" value="{{ dkey }}" x-model="device" class="hidden"/>
-              {{ dlabel }}
-            </label>
-            {% endfor %}
-          </div>
+    <!-- 2. Traffic sources -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="sourcesForm()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-white">Источники трафика</h2>
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
+            <span x-text="total"></span>%
+          </span>
+          <button type="button" @click="add()"
+            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">
+            + Добавить
+          </button>
         </div>
-
-        <!-- Sources -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-white text-sm">Источники</h3>
-            <div class="flex items-center gap-2">
-              <span class="text-xs" :class="srcTotal===100?'text-green-400':'text-red-400'"><span x-text="srcTotal"></span>%</span>
-              <button type="button" @click="addSrc()" class="text-xs text-blue-400 hover:text-blue-300">+ Добавить</button>
-            </div>
+      </div>
+      <div class="space-y-3">
+        <template x-for="(s, i) in sources" :key="i">
+          <div class="flex items-center gap-4">
+            <select x-model="s.key" :name="'source_keys'"
+              style="width:13rem;flex-shrink:0;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
+              <optgroup label="Organic Search" style="background:rgb(15 23 42)">
+                <option value="google_organic">Google Organic</option>
+                <option value="bing_organic">Bing Organic</option>
+                <option value="duckduckgo_organic">DuckDuckGo</option>
+                <option value="yahoo_organic">Yahoo Organic</option>
+                <option value="youtube_organic">YouTube Organic</option>
+              </optgroup>
+              <optgroup label="Paid" style="background:rgb(15 23 42)">
+                <option value="google_cpc">Google Ads (CPC)</option>
+              </optgroup>
+              <optgroup label="Social" style="background:rgb(15 23 42)">
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="twitter">Twitter / X</option>
+                <option value="pinterest">Pinterest</option>
+                <option value="tiktok">TikTok</option>
+              </optgroup>
+              <optgroup label="AI Chatbots" style="background:rgb(15 23 42)">
+                <option value="chatgpt">ChatGPT</option>
+                <option value="perplexity">Perplexity AI</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="copilot">Microsoft Copilot</option>
+                <option value="grok">Grok</option>
+              </optgroup>
+              <optgroup label="Messengers" style="background:rgb(15 23 42)">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="telegram">Telegram</option>
+              </optgroup>
+              <optgroup label="Other" style="background:rgb(15 23 42)">
+                <option value="email">Email</option>
+                <option value="direct">Direct</option>
+                <option value="referral">Referral</option>
+              </optgroup>
+            </select>
+            <input type="range" min="0" max="100" x-model.number="s.pct" :name="'source_percents'"
+              class="flex-1 accent-blue-500"/>
+            <span class="text-sm font-semibold text-white w-10 text-right" x-text="s.pct+'%'"></span>
+            <button type="button" @click="sources.splice(i,1)"
+              class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
           </div>
-          <div class="space-y-2">
-            <template x-for="(s, i) in sources" :key="i">
-              <div class="flex items-center gap-2">
-                <select x-model="s.key" :name="'source_keys'"
-                  style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.5rem;color:#fff;font-size:0.75rem;outline:none;">
-                  <optgroup label="Organic Search" style="background:rgb(15 23 42)">
-                    <option value="google_organic">Google Organic</option>
-                    <option value="bing_organic">Bing Organic</option>
-                    <option value="duckduckgo_organic">DuckDuckGo</option>
-                    <option value="yahoo_organic">Yahoo Organic</option>
-                    <option value="youtube_organic">YouTube Organic</option>
-                  </optgroup>
-                  <optgroup label="Paid" style="background:rgb(15 23 42)">
-                    <option value="google_cpc">Google Ads (CPC)</option>
-                  </optgroup>
-                  <optgroup label="Social" style="background:rgb(15 23 42)">
-                    <option value="instagram">Instagram</option>
-                    <option value="facebook">Facebook</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="twitter">Twitter / X</option>
-                    <option value="pinterest">Pinterest</option>
-                    <option value="tiktok">TikTok</option>
-                  </optgroup>
-                  <optgroup label="AI Chatbots" style="background:rgb(15 23 42)">
-                    <option value="chatgpt">ChatGPT</option>
-                    <option value="perplexity">Perplexity AI</option>
-                    <option value="gemini">Google Gemini</option>
-                    <option value="copilot">Microsoft Copilot</option>
-                    <option value="grok">Grok</option>
-                  </optgroup>
-                  <optgroup label="Messengers" style="background:rgb(15 23 42)">
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="telegram">Telegram</option>
-                  </optgroup>
-                  <optgroup label="Other" style="background:rgb(15 23 42)">
-                    <option value="email">Email</option>
-                    <option value="direct">Direct</option>
-                    <option value="referral">Referral</option>
-                  </optgroup>
-                </select>
-                <input type="number" :name="'source_percents'" x-model.number="s.pct"
-                  min="0" max="100"
-                  style="width:3.5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.25rem;color:#fff;font-size:0.75rem;outline:none;text-align:center;"/>
-                <span class="text-xs text-slate-500">%</span>
-                <button type="button" @click="sources.splice(i,1)" class="text-slate-500 hover:text-red-400 text-xs">✕</button>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- Geo -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5" x-data="geoForm()">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-white text-sm">Гео</h3>
-            <button type="button" @click="rows.push({country:'DE',percent:0})" class="text-xs text-blue-400 hover:text-blue-300">+ Страна</button>
-          </div>
-          <div class="space-y-2">
-            <template x-for="(row,i) in rows" :key="i">
-              <div class="flex items-center gap-2">
-                <select :name="'geo_countries'" x-model="row.country"
-                  style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.5rem;color:#fff;font-size:0.75rem;outline:none;">
-                  {% for c, n in countries %}
-                  <option value="{{ c }}" style="background:rgb(15 23 42)">{{ n }}</option>
-                  {% endfor %}
-                </select>
-                <input type="number" :name="'geo_percents'" x-model.number="row.percent"
-                  min="0" max="100"
-                  style="width:3.5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.375rem;padding:0.375rem 0.25rem;color:#fff;font-size:0.75rem;outline:none;text-align:center;"/>
-                <button type="button" @click="rows.splice(i,1)" class="text-slate-500 hover:text-red-400 text-xs">✕</button>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <button type="submit"
-          class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-xl text-sm font-medium transition">
-          Сохранить настройки
-        </button>
-      </form>
-
-      <!-- Delete -->
-      <form method="post" action="/projects/{{ project.id }}/delete"
-        onsubmit="return confirm('Удалить проект? Это действие необратимо.')">
-        <button type="submit"
-          class="w-full bg-transparent hover:bg-red-900/20 border border-red-800 text-red-400 hover:text-red-300 py-2.5 rounded-xl text-sm font-medium transition">
-          Удалить проект
-        </button>
-      </form>
+        </template>
+      </div>
     </div>
-  </div>
+
+    <!-- 3. Device -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
+      <h2 class="font-semibold text-white mb-4">Тип устройства</h2>
+      <div class="flex gap-3">
+        {% for dkey, dlabel, ddesc in [
+          ('desktop','🖥 Desktop','Windows Chrome'),
+          ('mobile','📱 Mobile','Android Chrome'),
+          ('mixed','🔀 Mixed','50/50 случайно')
+        ] %}
+        <label class="flex-1 border rounded-xl p-4 cursor-pointer transition text-center"
+          style="border-color: {% if (project.device or 'desktop') == dkey %}rgb(59 130 246){% else %}rgb(71 85 105){% endif %};
+                 background: {% if (project.device or 'desktop') == dkey %}rgba(30,58,138,0.3){% else %}transparent{% endif %};">
+          <input type="radio" name="device" value="{{ dkey }}"
+            {% if (project.device or 'desktop') == dkey %}checked{% endif %}
+            class="hidden"
+            onchange="this.closest('.flex').querySelectorAll('label').forEach(l=>l.style.borderColor='rgb(71 85 105)');this.closest('.flex').querySelectorAll('label').forEach(l=>l.style.background='transparent');this.closest('label').style.borderColor='rgb(59 130 246)';this.closest('label').style.background='rgba(30,58,138,0.3)'"/>
+          <p class="font-semibold text-white text-sm">{{ dlabel }}</p>
+          <p class="text-slate-400 text-xs mt-1">{{ ddesc }}</p>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 4. Geo -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="geoForm()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-white">Гео-таргетинг</h2>
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold" :class="geoTotal===100?'text-green-400':'text-red-400'">
+            <span x-text="geoTotal"></span>%
+          </span>
+          <button type="button" @click="rows.push({country:'DE',percent:0})"
+            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">
+            + Страна
+          </button>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <template x-for="(row,i) in rows" :key="i">
+          <div class="flex items-center gap-4">
+            <select x-model="row.country" :name="'geo_countries'"
+              style="width:13rem;flex-shrink:0;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
+              {% for code, name in countries %}
+              <option value="{{ code }}" style="background:rgb(15 23 42)">{{ name }}</option>
+              {% endfor %}
+            </select>
+            <input type="range" min="0" max="100" x-model.number="row.percent" :name="'geo_percents'"
+              class="flex-1 accent-purple-500"/>
+            <span class="text-sm font-semibold text-white w-10 text-right" x-text="row.percent+'%'"></span>
+            <button type="button" @click="rows.splice(i,1)"
+              class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Save + Delete -->
+    <div class="flex gap-3">
+      <button type="submit"
+        class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition">
+        Сохранить настройки
+      </button>
+      <button type="button"
+        onclick="if(confirm('Удалить проект?')) document.getElementById('deleteForm').submit()"
+        class="px-6 bg-transparent border border-red-800 text-red-400 hover:bg-red-900/20 font-semibold py-3 rounded-xl transition text-sm">
+        Удалить
+      </button>
+    </div>
+  </form>
+
+  <form id="deleteForm" method="post" action="/projects/{{ project.id }}/delete" style="display:none"></form>
 </div>
 
 <script>
 async function sendNow() {
   const btn = document.getElementById('sendNowBtn');
   const label = document.getElementById('sendNowLabel');
-  btn.disabled = true;
-  label.textContent = 'Отправляем...';
+  btn.disabled = true; label.textContent = 'Отправляем...';
   try {
-    const r = await fetch('/projects/{{ project.id }}/send-now', { method: 'POST' });
+    const r = await fetch('/projects/{{ project.id }}/send-now', {method:'POST'});
     const data = await r.json();
     if (data.ok) {
       label.textContent = '✓ Отправлено ' + data.count + ' хитов';
-      setTimeout(() => { location.reload(); }, 2000);
-    } else {
-      label.textContent = 'Ошибка';
-      btn.disabled = false;
-    }
-  } catch(e) {
-    label.textContent = 'Ошибка';
-    btn.disabled = false;
-  }
+      setTimeout(() => location.reload(), 2000);
+    } else { label.textContent = 'Ошибка'; btn.disabled = false; }
+  } catch(e) { label.textContent = 'Ошибка'; btn.disabled = false; }
 }
 
-function settingsForm() {
+function projectDetail() { return {} }
+
+function sourcesForm() {
+  const raw = {{ project.sources | tojson }};
   return {
-    device: '{{ project.device or "desktop" }}',
-    sources: {{ project.sources | tojson }}.length !== undefined
-      ? Object.entries({{ project.sources | tojson }}).map(([k,v]) => ({key:k, pct:v}))
-      : Object.entries({{ project.sources | tojson }}).map(([k,v]) => ({key:k, pct:v})),
-    get srcTotal() { return this.sources.reduce((a,s)=>a+s.pct,0) },
-    addSrc() { this.sources.push({key:'google_organic', pct:0}) },
+    sources: Object.entries(raw).map(([k,v]) => ({key:k, pct:v})),
+    get total() { return this.sources.reduce((a,s)=>a+s.pct,0) },
+    add() { this.sources.push({key:'google_organic', pct:0}) },
   }
 }
 
 function geoForm() {
+  const raw = {{ project.geo | tojson }};
   return {
-    rows: Object.entries({{ project.geo | tojson }}).map(([c,p]) => ({country:c, percent:p})),
+    rows: Object.entries(raw).map(([c,p]) => ({country:c, percent:p})),
+    get geoTotal() { return this.rows.reduce((a,r)=>a+r.percent,0) },
   }
 }
 </script>
