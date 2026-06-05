@@ -143,7 +143,10 @@ def project_detail(
     )
     stats_source = (
         base.with_entities(models.HitLog.source, func.count(models.HitLog.id))
-        .group_by(models.HitLog.source).all()
+        .filter(models.HitLog.source.isnot(None), models.HitLog.source != "")
+        .group_by(models.HitLog.source)
+        .order_by(func.count(models.HitLog.id).desc())
+        .all()
     )
 
     # Map source keys to readable labels
@@ -224,10 +227,10 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
                 r = f.result()
                 if r["status"] == 204:
                     ok += 1
-                logs.append(models.HitLog(
-                    project_id=project_id, country=r.get("country"),
-                    source=r.get("source"), medium="organic", status=r.get("status", 0),
-                ))
+                    logs.append(models.HitLog(
+                        project_id=project_id, country=r.get("country"),
+                        source=r.get("source"), medium="organic", status=204,
+                    ))
         db.bulk_save_objects(logs)
         user = db.query(models.User).filter(models.User.id == user_id).first()
         project = db.query(models.Project).filter(models.Project.id == project_id).first()
