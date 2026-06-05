@@ -47,12 +47,14 @@ SOURCE_MEDIUMS = {
 
 def get_proxy(country_code: str) -> dict:
     if not PROXY_PASS:
+        log.warning("PROXY_PASS is empty — no proxy used")
         return None
     from urllib.parse import quote
     cc = country_code.lower()
-    user = quote("user-" + PROXY_USER + "-country-" + cc, safe="")
-    password = quote(PROXY_PASS, safe="")
+    user = "user-" + PROXY_USER + "-country-" + cc   # dashes are safe, no encoding needed
+    password = quote(PROXY_PASS, safe="")             # encode special chars like +
     url = "http://" + user + ":" + password + "@" + PROXY_HOST + ":" + PROXY_PORT
+    log.info("Using proxy: http://%s:***@%s:%s", user, PROXY_HOST, PROXY_PORT)
     return {"http": url, "https": url}
 
 
