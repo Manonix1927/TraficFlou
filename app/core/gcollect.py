@@ -27,22 +27,41 @@ LANG_MAP = {
     "HR": "hr-HR,hr;q=0.9", "RS": "sr-RS,sr;q=0.9",
 }
 
-SOURCE_REFERRERS = {
-    "google":    "https://www.google.com/",
-    "instagram": "https://www.instagram.com/",
-    "facebook":  "https://www.facebook.com/",
-    "twitter":   "https://twitter.com/",
-    "youtube":   "https://www.youtube.com/",
+# source_key -> (utm_source, utm_medium, referrer)
+SOURCES = {
+    # Organic Search
+    "google_organic":     ("google",                "organic",  "https://www.google.com/"),
+    "bing_organic":       ("bing",                  "organic",  "https://www.bing.com/"),
+    "duckduckgo_organic": ("duckduckgo",            "organic",  "https://duckduckgo.com/"),
+    "yahoo_organic":      ("yahoo",                 "organic",  "https://search.yahoo.com/"),
+    "youtube_organic":    ("youtube",               "organic",  "https://www.youtube.com/"),
+    # Paid
+    "google_cpc":         ("google",                "cpc",      "https://www.google.com/"),
+    # Social
+    "instagram":          ("instagram",             "social",   "https://www.instagram.com/"),
+    "facebook":           ("facebook",              "social",   "https://www.facebook.com/"),
+    "linkedin":           ("linkedin",              "social",   "https://www.linkedin.com/"),
+    "twitter":            ("twitter",               "social",   "https://twitter.com/"),
+    "pinterest":          ("pinterest",             "social",   "https://www.pinterest.com/"),
+    "tiktok":             ("tiktok",                "social",   "https://www.tiktok.com/"),
+    # AI Chatbots (GA4 channel: Referral / AI)
+    "chatgpt":            ("chatgpt.com",           "referral", "https://chatgpt.com/"),
+    "perplexity":         ("perplexity.ai",         "referral", "https://www.perplexity.ai/"),
+    "gemini":             ("gemini.google.com",     "referral", "https://gemini.google.com/"),
+    "copilot":            ("copilot.microsoft.com", "referral", "https://copilot.microsoft.com/"),
+    "grok":               ("grok.com",              "referral", "https://grok.com/"),
+    # Messengers
+    "whatsapp":           ("whatsapp",              "social",   None),
+    "telegram":           ("telegram",              "social",   None),
+    # Other
+    "email":              ("newsletter",            "email",    None),
+    "direct":             (None,                    None,       None),
+    "referral":           (None,                    "referral", None),
 }
 
-SOURCE_MEDIUMS = {
-    "organic":  ("google",    "organic"),
-    "social":   ("instagram", "social"),
-    "direct":   (None,        None),
-    "referral": (None,        "referral"),
-    "cpc":      ("google",    "cpc"),
-    "email":    ("newsletter","email"),
-}
+# Legacy aliases
+SOURCE_MEDIUMS = {k: (v[0], v[1]) for k, v in SOURCES.items()}
+SOURCE_REFERRERS = {k: v[2] for k, v in SOURCES.items() if v[2]}
 
 
 def get_proxy(country_code: str) -> dict:
@@ -58,19 +77,34 @@ def get_proxy(country_code: str) -> dict:
     return {"http": url, "https": url}
 
 
+DEVICE_PROFILES = {
+    "desktop": {
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "sr": "1280x720", "uaa": "x86", "uab": "64", "uap": "Windows", "uapv": "10.0", "uamb": "0",
+    },
+    "mobile": {
+        "ua": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.60 Mobile Safari/537.36",
+        "sr": "390x844", "uaa": "arm", "uab": "64", "uap": "Android", "uapv": "14.0", "uamb": "1",
+    },
+}
+
+
 def send_hit(
     tid: str,
     site_url: str,
     country_code: str,
-    traffic_source: str = "organic",
+    traffic_source: str = "google_organic",
     campaign: str = None,
     gtm_id: str = None,
+    device: str = "desktop",
 ) -> dict:
-    source, medium = SOURCE_MEDIUMS.get(traffic_source, ("google", "organic"))
+    src_data = SOURCES.get(traffic_source, SOURCES["google_organic"])
+    source, medium, referrer = src_data
     lang = LANG_MAP.get(country_code.upper(), "en-US,en;q=0.9")
     ul = lang.split(",")[0].lower()
     cid = str(random.randint(100000000, 999999999)) + "." + str(int(time.time()))
     ts = str(int(time.time() * 1000))
+    dev = DEVICE_PROFILES.get(device, DEVICE_PROFILES["desktop"])
 
     dl = site_url
     if source and medium:
@@ -79,8 +113,7 @@ def send_hit(
         if campaign:
             dl += "&utm_campaign=" + campaign
 
-    dr = SOURCE_REFERRERS.get(source, "https://www.google.com/") if source else ""
-
+    dr = referrer or ""
     gtm_param = gtm_id if gtm_id else "45je6630v9232360688za200zd9232360688"
 
     params = {
@@ -88,8 +121,9 @@ def send_hit(
         "gtm": gtm_param,
         "_p": ts, "gcd": "13l3l3l3l1l1", "npa": "0", "dma": "0",
         "cid": cid, "frm": "0", "pscdl": "noapi",
-        "sr": "1280x720", "uaa": "x86", "uab": "64",
-        "uap": "Windows", "uapv": "10.0", "ul": ul,
+        "sr": dev["sr"], "uaa": dev["uaa"], "uab": dev["uab"],
+        "uap": dev["uap"], "uapv": dev["uapv"], "uamb": dev["uamb"],
+        "ul": ul,
         "_s": "1", "sid": str(int(time.time())), "sct": "1", "seg": "0",
         "dl": dl, "en": "page_view", "_ss": "1", "_fv": "1",
     }
@@ -97,7 +131,7 @@ def send_hit(
         params["dr"] = dr
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "User-Agent": dev["ua"],
         "Accept-Language": lang,
         "Referer": dr or site_url,
     }

@@ -19,45 +19,42 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">Название проекта</label>
-          <input name="name" id="field-name" required placeholder="Мой сайт" class="input-field"/>
+          <input name="name" required placeholder="Мой сайт" class="input-field"/>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">URL сайта</label>
-          <div class="flex gap-2">
-            <input name="site_url" id="field-url" required placeholder="https://example.com" class="input-field" style="flex:1"/>
-            <button type="button" onclick="detectGA()"
-              style="background:rgb(37 99 235);color:#fff;border:none;border-radius:0.5rem;padding:0 1rem;font-size:0.8rem;cursor:pointer;white-space:nowrap;flex-shrink:0;"
-              id="detect-btn">
-              🔍 Найти GA4
-            </button>
-          </div>
+          <input name="site_url" required placeholder="https://example.com" class="input-field"/>
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-1.5">
-            GA4 Measurement ID
-            <span id="ga-status" style="color:rgb(74 222 128);font-size:0.75rem;margin-left:0.5rem;"></span>
-          </label>
-          <input name="ga_tid" id="field-ga-tid" required placeholder="G-XXXXXXXXXX" class="input-field"/>
+          <label class="block text-sm text-slate-400 mb-1.5">GA4 Measurement ID</label>
+          <input name="ga_tid" required placeholder="G-XXXXXXXXXX" class="input-field"/>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
-          <input name="gtm_id" id="field-gtm-id" placeholder="GTM-XXXXXXX" class="input-field"/>
+          <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field"/>
         </div>
       </div>
     </div>
 
-    <!-- Traffic volume -->
+    <!-- Traffic volume + device -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
-      <h2 class="font-semibold text-white mb-4">Объём трафика</h2>
-      <div class="flex items-center gap-4">
-        <div class="flex-1">
+      <h2 class="font-semibold text-white mb-4">Объём и устройства</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="col-span-1">
           <label class="block text-sm text-slate-400 mb-1.5">Хитов в день</label>
-          <input name="daily_hits" type="number" value="100" min="10" max="10000" class="input-field" x-model="dailyHits"/>
+          <input name="daily_hits" type="number" value="100" min="10" max="100000" class="input-field" x-model="dailyHits"/>
         </div>
-        <div class="flex-1 bg-slate-900 rounded-lg p-4 text-center">
-          <p class="text-xs text-slate-400 mb-1">Расход кредитов</p>
-          <p class="text-2xl font-bold text-blue-400" x-text="dailyHits"></p>
-          <p class="text-xs text-slate-500">в день</p>
+        <div class="col-span-2">
+          <label class="block text-sm text-slate-400 mb-1.5">Тип устройства</label>
+          <div class="flex gap-2">
+            <template x-for="d in devices" :key="d.key">
+              <label :class="device===d.key ? 'border-blue-500 bg-blue-900/30 text-white' : 'border-slate-600 text-slate-400'"
+                style="flex:1;border:1px solid;border-radius:0.5rem;padding:0.6rem;text-align:center;cursor:pointer;font-size:0.8rem;transition:all 0.15s;">
+                <input type="radio" name="device" :value="d.key" x-model="device" class="hidden"/>
+                <span x-text="d.label"></span>
+              </label>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -66,18 +63,59 @@
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="sourcesForm()">
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-white">Источники трафика</h2>
-        <span class="text-sm" :class="total === 100 ? 'text-green-400' : 'text-red-400'">
-          Итого: <span x-text="total"></span>%
-        </span>
+        <div class="flex items-center gap-3">
+          <span class="text-sm" :class="total===100?'text-green-400':'text-red-400'">
+            Итого: <span x-text="total"></span>%
+          </span>
+          <button type="button" @click="addSource()"
+            class="text-sm text-blue-400 hover:text-blue-300">+ Добавить</button>
+        </div>
       </div>
-      <div class="space-y-3">
-        <template x-for="src in sources" :key="src.key">
-          <div class="flex items-center gap-4">
-            <div class="w-28 text-sm text-slate-300" x-text="src.label"></div>
-            <input type="hidden" :name="'sources_' + src.key" :value="src.value"/>
-            <input type="range" min="0" max="100" x-model.number="src.value" @input="sync(src)"
-              class="flex-1 accent-blue-500"/>
-            <div class="w-12 text-right text-sm font-semibold text-white" x-text="src.value + '%'"></div>
+      <div class="space-y-2">
+        <template x-for="(src, i) in sources" :key="i">
+          <div class="flex items-center gap-3">
+            <select x-model="src.key" :name="'source_keys'"
+              style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
+              <optgroup label="Organic Search" style="background:rgb(15 23 42);">
+                <option value="google_organic">Google Organic</option>
+                <option value="bing_organic">Bing Organic</option>
+                <option value="duckduckgo_organic">DuckDuckGo</option>
+                <option value="yahoo_organic">Yahoo Organic</option>
+                <option value="youtube_organic">YouTube Organic</option>
+              </optgroup>
+              <optgroup label="Paid" style="background:rgb(15 23 42);">
+                <option value="google_cpc">Google Ads (CPC)</option>
+              </optgroup>
+              <optgroup label="Social" style="background:rgb(15 23 42);">
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="twitter">Twitter / X</option>
+                <option value="pinterest">Pinterest</option>
+                <option value="tiktok">TikTok</option>
+              </optgroup>
+              <optgroup label="AI Chatbots" style="background:rgb(15 23 42);">
+                <option value="chatgpt">ChatGPT</option>
+                <option value="perplexity">Perplexity AI</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="copilot">Microsoft Copilot</option>
+                <option value="grok">Grok</option>
+              </optgroup>
+              <optgroup label="Messengers" style="background:rgb(15 23 42);">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="telegram">Telegram</option>
+              </optgroup>
+              <optgroup label="Other" style="background:rgb(15 23 42);">
+                <option value="email">Email</option>
+                <option value="direct">Direct</option>
+                <option value="referral">Referral</option>
+              </optgroup>
+            </select>
+            <input type="number" :name="'source_percents'" x-model.number="src.pct"
+              min="0" max="100"
+              style="width:5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem;color:#fff;font-size:0.875rem;outline:none;text-align:center;"/>
+            <span class="text-xs text-slate-400">%</span>
+            <button type="button" @click="sources.splice(i,1)" class="text-slate-500 hover:text-red-400" style="flex-shrink:0;">✕</button>
           </div>
         </template>
       </div>
@@ -97,17 +135,15 @@
         <template x-for="(row, i) in rows" :key="i">
           <div class="flex items-center gap-3">
             <select :name="'geo_countries'" x-model="row.country"
-              style="flex:1; background-color:rgb(15 23 42); border:1px solid rgb(71 85 105); border-radius:0.5rem; padding:0.625rem 1rem; color:#fff; font-size:0.875rem; outline:none; min-width:0;">
+              style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.625rem 1rem;color:#fff;font-size:0.875rem;outline:none;min-width:0;">
               {% for code, name in countries %}
               <option value="{{ code }}" style="background:rgb(15 23 42);color:#fff;">{{ name }}</option>
               {% endfor %}
             </select>
             <input type="number" :name="'geo_percents'" x-model.number="row.percent"
               min="0" max="100" placeholder="%"
-              style="width:5rem; background-color:rgb(15 23 42); border:1px solid rgb(71 85 105); border-radius:0.5rem; padding:0.625rem 0.5rem; color:#fff; font-size:0.875rem; outline:none; text-align:center;"/>
-            <button type="button" @click="rows.splice(i,1)" class="text-slate-500 hover:text-red-400 transition" style="flex-shrink:0;">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+              style="width:5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.625rem 0.5rem;color:#fff;font-size:0.875rem;outline:none;text-align:center;"/>
+            <button type="button" @click="rows.splice(i,1)" class="text-slate-500 hover:text-red-400 transition" style="flex-shrink:0;">✕</button>
           </div>
         </template>
       </div>
@@ -123,80 +159,38 @@
 
 <style>
   .input-field {
-    width: 100%;
-    background-color: rgb(15 23 42);
-    border: 1px solid rgb(71 85 105);
-    border-radius: 0.5rem;
-    padding: 0.625rem 1rem;
-    color: #fff;
-    font-size: 0.875rem;
-    transition: border-color 0.15s;
-    outline: none;
+    width: 100%; background-color: rgb(15 23 42);
+    border: 1px solid rgb(71 85 105); border-radius: 0.5rem;
+    padding: 0.625rem 1rem; color: #fff; font-size: 0.875rem;
+    transition: border-color 0.15s; outline: none;
   }
-  .input-field:focus {
-    border-color: rgb(59 130 246);
-    box-shadow: 0 0 0 1px rgb(59 130 246);
-  }
-  .input-field option {
-    background-color: rgb(15 23 42);
-    color: #fff;
-  }
+  .input-field:focus { border-color: rgb(59 130 246); box-shadow: 0 0 0 1px rgb(59 130 246); }
+  .input-field option { background-color: rgb(15 23 42); color: #fff; }
 </style>
 
 <script>
-async function detectGA() {
-  const urlField = document.getElementById('field-url');
-  const btn = document.getElementById('detect-btn');
-  const status = document.getElementById('ga-status');
-  const url = urlField.value.trim();
-  if (!url) { alert('Введите URL сайта'); return; }
-
-  btn.textContent = '⏳ Поиск...';
-  btn.disabled = true;
-  status.textContent = '';
-
-  try {
-    const r = await fetch('/api/detect-ga?url=' + encodeURIComponent(url));
-    const data = await r.json();
-    if (data.ok && data.ga4_id) {
-      document.getElementById('field-ga-tid').value = data.ga4_id;
-      if (data.gtm_id) document.getElementById('field-gtm-id').value = data.gtm_id;
-      // Auto-fill name from domain
-      const domain = new URL(url.startsWith('http') ? url : 'https://'+url).hostname.replace('www.','');
-      if (!document.getElementById('field-name').value) {
-        document.getElementById('field-name').value = domain;
-      }
-      status.textContent = '✓ Найден';
-      status.style.color = 'rgb(74 222 128)';
-    } else if (data.ok) {
-      status.textContent = '⚠ GA4 не найден на сайте';
-      status.style.color = 'rgb(251 191 36)';
-    } else {
-      status.textContent = '✗ Ошибка загрузки';
-      status.style.color = 'rgb(248 113 113)';
-    }
-  } catch(e) {
-    status.textContent = '✗ Ошибка';
-    status.style.color = 'rgb(248 113 113)';
+function projectForm() {
+  return {
+    dailyHits: 100,
+    device: 'desktop',
+    devices: [
+      { key: 'desktop', label: '🖥 Desktop' },
+      { key: 'mobile',  label: '📱 Mobile' },
+      { key: 'mixed',   label: '🔀 Mixed' },
+    ]
   }
-  btn.textContent = '🔍 Найти GA4';
-  btn.disabled = false;
 }
-
-function projectForm() { return { dailyHits: 100 } }
 
 function sourcesForm() {
   return {
     sources: [
-      { key: 'organic', label: 'Organic Search', value: 40 },
-      { key: 'social',  label: 'Social',         value: 25 },
-      { key: 'direct',  label: 'Direct',          value: 20 },
-      { key: 'referral',label: 'Referral',        value: 15 },
+      { key: 'google_organic', pct: 50 },
+      { key: 'instagram',      pct: 25 },
+      { key: 'direct',         pct: 15 },
+      { key: 'facebook',       pct: 10 },
     ],
-    get total() { return this.sources.reduce((s,x) => s + x.value, 0) },
-    sync(changed) {
-      // Adjust to keep total ≤ 100
-    }
+    get total() { return this.sources.reduce((s,x)=>s+x.pct, 0) },
+    addSource() { this.sources.push({ key: 'google_organic', pct: 0 }) }
   }
 }
 

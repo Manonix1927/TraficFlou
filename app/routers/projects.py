@@ -72,21 +72,15 @@ def create_project(
     ga_tid: str = Form(...),
     gtm_id: str = Form(""),
     daily_hits: int = Form(100),
-    sources_organic: int = Form(40),
-    sources_social: int = Form(25),
-    sources_direct: int = Form(20),
-    sources_referral: int = Form(15),
+    device: str = Form("desktop"),
+    source_keys: list = Form(...),
+    source_percents: list = Form(...),
     geo_countries: list = Form(...),
     geo_percents: list = Form(...),
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    sources = {
-        "organic": sources_organic,
-        "social": sources_social,
-        "direct": sources_direct,
-        "referral": sources_referral,
-    }
+    sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
 
     project = models.Project(
@@ -96,6 +90,7 @@ def create_project(
         ga_tid=ga_tid,
         gtm_id=gtm_id or None,
         daily_hits=daily_hits,
+        device=device,
         sources=sources,
         geo=geo,
         status="paused",

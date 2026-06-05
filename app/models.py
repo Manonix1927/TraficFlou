@@ -30,11 +30,12 @@ class Project(Base):
 
     # Traffic config
     daily_hits = Column(Integer, default=100)         # хитов в день
+    device = Column(String, default="desktop")        # desktop | mobile | mixed
     sources = Column(JSON, default=lambda: {          # % по источникам
-        "organic": 40,
-        "social": 25,
-        "direct": 20,
-        "referral": 15,
+        "google_organic": 60,
+        "instagram": 20,
+        "direct": 10,
+        "facebook": 10,
     })
     geo = Column(JSON, default=lambda: {              # % по странам
         "UA": 100,

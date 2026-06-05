@@ -51,6 +51,7 @@ def dispatch_hits():
                 sources=project.sources,
                 geo=project.geo,
                 gtm_id=project.gtm_id,
+                device=project.device or "desktop",
             )
     finally:
         db.close()
@@ -66,6 +67,7 @@ def send_project_hits(
     sources: dict,
     geo: dict,
     gtm_id: str = None,
+    device: str = "desktop",
 ):
     """Отправляет hits_count хитов для одного проекта, списывает кредиты."""
     from app.database import SessionLocal
@@ -81,11 +83,14 @@ def send_project_hits(
             return
 
         # Генерируем задания
+        def pick_device(d):
+            return random.choice(["desktop", "mobile"]) if d == "mixed" else d
+
         jobs = []
         for _ in range(hits_count):
             country = pick_weighted(geo)
             source = pick_weighted(sources)
-            jobs.append((tid, site_url, country, source, "organic_traffic", gtm_id))
+            jobs.append((tid, site_url, country, source, None, gtm_id, pick_device(device)))
 
         # Параллельная отправка
         ok_count = 0
