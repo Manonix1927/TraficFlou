@@ -1,6 +1,8 @@
 import json
 import math
 import random
+import re
+import requests as http_requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Depends, Request, Form, HTTPException, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
@@ -31,6 +33,28 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: models.User
     return templates.TemplateResponse("dashboard.html", {
         "request": request, "user": user, "projects": projects,
     })
+
+
+@router.get("/api/detect-ga", response_class=JSONResponse)
+def detect_ga(url: str, user: models.User = Depends(get_current_user)):
+    """Fetches the page and extracts GA4/GTM IDs from HTML."""
+    try:
+        if not url.startswith("http"):
+            url = "https://" + url
+        resp = http_requests.get(url, timeout=10, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0.0.0 Safari/537.36"
+        })
+        html = resp.text
+        ga4_ids = list(set(re.findall(r'G-[A-Z0-9]{6,}', html)))
+        gtm_ids = list(set(re.findall(r'GTM-[A-Z0-9]{4,}', html)))
+        return {
+            "ok": True,
+            "ga4_id": ga4_ids[0] if ga4_ids else None,
+            "gtm_id": gtm_ids[0] if gtm_ids else None,
+            "all_ga4": ga4_ids,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @router.get("/projects/create", response_class=HTMLResponse)

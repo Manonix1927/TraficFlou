@@ -19,19 +19,29 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">Название проекта</label>
-          <input name="name" required placeholder="Мой сайт" class="input-field"/>
+          <input name="name" id="field-name" required placeholder="Мой сайт" class="input-field"/>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">URL сайта</label>
-          <input name="site_url" required placeholder="https://example.com" class="input-field"/>
+          <div class="flex gap-2">
+            <input name="site_url" id="field-url" required placeholder="https://example.com" class="input-field" style="flex:1"/>
+            <button type="button" onclick="detectGA()"
+              style="background:rgb(37 99 235);color:#fff;border:none;border-radius:0.5rem;padding:0 1rem;font-size:0.8rem;cursor:pointer;white-space:nowrap;flex-shrink:0;"
+              id="detect-btn">
+              🔍 Найти GA4
+            </button>
+          </div>
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-1.5">GA4 Measurement ID</label>
-          <input name="ga_tid" required placeholder="G-XXXXXXXXXX" class="input-field"/>
+          <label class="block text-sm text-slate-400 mb-1.5">
+            GA4 Measurement ID
+            <span id="ga-status" style="color:rgb(74 222 128);font-size:0.75rem;margin-left:0.5rem;"></span>
+          </label>
+          <input name="ga_tid" id="field-ga-tid" required placeholder="G-XXXXXXXXXX" class="input-field"/>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
-          <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field"/>
+          <input name="gtm_id" id="field-gtm-id" placeholder="GTM-XXXXXXX" class="input-field"/>
         </div>
       </div>
     </div>
@@ -134,6 +144,45 @@
 </style>
 
 <script>
+async function detectGA() {
+  const urlField = document.getElementById('field-url');
+  const btn = document.getElementById('detect-btn');
+  const status = document.getElementById('ga-status');
+  const url = urlField.value.trim();
+  if (!url) { alert('Введите URL сайта'); return; }
+
+  btn.textContent = '⏳ Поиск...';
+  btn.disabled = true;
+  status.textContent = '';
+
+  try {
+    const r = await fetch('/api/detect-ga?url=' + encodeURIComponent(url));
+    const data = await r.json();
+    if (data.ok && data.ga4_id) {
+      document.getElementById('field-ga-tid').value = data.ga4_id;
+      if (data.gtm_id) document.getElementById('field-gtm-id').value = data.gtm_id;
+      // Auto-fill name from domain
+      const domain = new URL(url.startsWith('http') ? url : 'https://'+url).hostname.replace('www.','');
+      if (!document.getElementById('field-name').value) {
+        document.getElementById('field-name').value = domain;
+      }
+      status.textContent = '✓ Найден';
+      status.style.color = 'rgb(74 222 128)';
+    } else if (data.ok) {
+      status.textContent = '⚠ GA4 не найден на сайте';
+      status.style.color = 'rgb(251 191 36)';
+    } else {
+      status.textContent = '✗ Ошибка загрузки';
+      status.style.color = 'rgb(248 113 113)';
+    }
+  } catch(e) {
+    status.textContent = '✗ Ошибка';
+    status.style.color = 'rgb(248 113 113)';
+  }
+  btn.textContent = '🔍 Найти GA4';
+  btn.disabled = false;
+}
+
 function projectForm() { return { dailyHits: 100 } }
 
 function sourcesForm() {
