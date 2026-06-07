@@ -28,18 +28,14 @@ LANG_MAP = {
 }
 
 # source_key -> (utm_source, utm_medium, referrer)
-# Organic sources: NO utm params (source=None, medium=None), only referrer.
-# Real organic traffic never has utm_* in the URL — GA4 attributes it via
-# the Referer header alone. Adding UTMs to organic hits creates a conflict
-# that GA4 cannot resolve → "Unassigned".
 SOURCES = {
-    # Organic Search — referrer only, no UTMs
-    "google_organic":     (None,                    None,       "https://www.google.com/"),
-    "bing_organic":       (None,                    None,       "https://www.bing.com/"),
-    "duckduckgo_organic": (None,                    None,       "https://duckduckgo.com/"),
-    "yahoo_organic":      (None,                    None,       "https://search.yahoo.com/"),
-    "youtube_organic":    (None,                    None,       "https://www.youtube.com/"),
-    # Paid — UTMs are correct here (real CPC traffic IS utm-tagged)
+    # Organic Search
+    "google_organic":     ("google",                "organic",  "https://www.google.com/"),
+    "bing_organic":       ("bing",                  "organic",  "https://www.bing.com/"),
+    "duckduckgo_organic": ("duckduckgo",            "organic",  "https://duckduckgo.com/"),
+    "yahoo_organic":      ("yahoo",                 "organic",  "https://search.yahoo.com/"),
+    "youtube_organic":    ("youtube",               "organic",  "https://www.youtube.com/"),
+    # Paid
     "google_cpc":         ("google",                "cpc",      "https://www.google.com/"),
     # Social
     "instagram":          ("instagram",             "social",   "https://www.instagram.com/"),
@@ -122,7 +118,7 @@ def send_hit(
             dl += "&utm_campaign=" + campaign
 
     dr = referrer or ""
-    gtm_param = gtm_id if gtm_id else "45je6630v9232360688za200zd9232360688"
+    gtm_param = gtm_id if gtm_id else "45Pe6630v9232360688za200zd9232360688"
 
     params = {
         "v": "2", "tid": tid,
