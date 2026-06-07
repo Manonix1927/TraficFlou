@@ -118,7 +118,15 @@ def send_hit(
             dl += "&utm_campaign=" + campaign
 
     dr = referrer or ""
-    gtm_param = gtm_id if gtm_id else "45Pe6630v9232360688za200zd9232360688"
+
+    # gtm: use the confirmed-working hash from gcollect_geo.py.
+    # If user supplied a GTM container ID (GTM-XXXXX format) — ignore it,
+    # that format is wrong for this parameter.
+    # If user supplied an actual gtag config hash — use it.
+    if gtm_id and not gtm_id.upper().startswith("GTM-"):
+        gtm_param = gtm_id
+    else:
+        gtm_param = "45Pe6630v9232360688za200zd9232360688"
 
     params = {
         "v": "2", "tid": tid,
@@ -129,16 +137,23 @@ def send_hit(
         "uap": dev["uap"], "uapv": dev["uapv"], "uamb": dev["uamb"],
         "ul": ul,
         "_s": "1", "sid": str(int(time.time())), "sct": "1", "seg": "0",
-        "dl": dl, "en": "page_view", "_ss": "1", "_fv": "1",
+        "dl": dl,
     }
+    # dr must sit right next to dl (mirrors real gtag.js request order)
+    # and is only included when there is an actual referrer
     if dr:
         params["dr"] = dr
+    params.update({"en": "page_view", "_ss": "1", "_fv": "1"})
 
     headers = {
         "User-Agent": dev["ua"],
         "Accept-Language": lang,
-        "Referer": dr or site_url,
     }
+    # Only send Referer header when there is a real referrer.
+    # Falling back to site_url caused GA4 to see a self-referral
+    # and could strip UTM attribution for some sources.
+    if dr:
+        headers["Referer"] = dr
 
     proxies = get_proxy(country_code)
 
