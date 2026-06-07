@@ -56,7 +56,7 @@ SOURCES = {
     # Other
     "email":              ("newsletter",            "email",    None),
     "direct":             (None,                    None,       None),
-    "referral":           (None,                    "referral", None),
+    "referral":           ("referral",              "referral", "https://example.com/"),
 }
 
 # Legacy aliases

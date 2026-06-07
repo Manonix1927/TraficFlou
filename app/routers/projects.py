@@ -224,7 +224,7 @@ def update_project(
     return RedirectResponse(f"/projects/{project_id}", status_code=302)
 
 
-def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_url: str, sources: dict, geo: dict, gtm_id: str):
+def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_url: str, sources: dict, geo: dict, gtm_id: str, device=None):
     """Синхронная отправка хитов — используется для немедленного запуска."""
     from app.database import SessionLocal
     db = SessionLocal()
@@ -232,9 +232,11 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
         def pick_dev(d):
             if isinstance(d, dict) and d:
                 return pick_weighted(d)
-            return "desktop"
+            if d == "mixed":
+                return random.choice(["desktop", "mobile", "tablet"])
+            return d if d in ("desktop", "mobile", "tablet") else "desktop"
 
-        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id, pick_dev(device)) for _ in range(count)]
+        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id, pick_dev(device or "desktop")) for _ in range(count)]
         ok = 0
         logs = []
         with ThreadPoolExecutor(max_workers=10) as ex:
@@ -245,7 +247,7 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
                     ok += 1
                     logs.append(models.HitLog(
                         project_id=project_id, country=r.get("country"),
-                        source=r.get("source"), medium="organic", status=204,
+                        source=r.get("source"), medium=r.get("source", ""), status=204,
                     ))
         db.bulk_save_objects(logs)
         user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -280,6 +282,7 @@ def send_now(
         project_id=project.id, user_id=user.id, count=count,
         tid=project.ga_tid, site_url=project.site_url,
         sources=project.sources, geo=project.geo, gtm_id=project.gtm_id,
+        device=project.device,
     )
     return JSONResponse({"ok": True, "count": count})
 
