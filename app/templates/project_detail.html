@@ -179,6 +179,10 @@
           <span x-text="total"></span>%
         </span>
       </div>
+      <!-- Hidden inputs submit the real values — more reliable than :name inside x-for -->
+      <input type="hidden" name="device_desktop" x-model="items[0].pct">
+      <input type="hidden" name="device_mobile"  x-model="items[1].pct">
+      <input type="hidden" name="device_tablet"  x-model="items[2].pct">
       <div class="space-y-3">
         <template x-for="(d, i) in items" :key="d.key">
           <div class="flex items-center gap-4">
@@ -186,7 +190,7 @@
               <span x-text="d.icon" class="text-lg"></span>
               <span class="text-sm text-slate-300" x-text="d.label"></span>
             </div>
-            <input type="range" min="0" max="100" x-model.number="d.pct" :name="'device_' + d.key"
+            <input type="range" min="0" max="100" x-model.number="d.pct"
               @input="slide(i)"
               class="flex-1 accent-green-500"/>
             <span class="text-sm font-semibold text-white w-10 text-right" x-text="d.pct+'%'"></span>

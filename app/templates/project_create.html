@@ -47,13 +47,18 @@
         <div class="col-span-2" x-data="deviceForm()">
           <label class="block text-sm text-slate-400 mb-1.5">
             Тип устройства
-            <span class="ml-2 text-xs font-semibold" :class="devTotal===100?'text-green-400':'text-red-400'"><span x-text="devTotal"></span>%</span>
+            <span class="ml-2 text-xs font-semibold" :class="total===100?'text-green-400':'text-red-400'"><span x-text="total"></span>%</span>
           </label>
+          <!-- Hidden inputs for reliable form submission -->
+          <input type="hidden" name="device_desktop" x-model="items[0].pct">
+          <input type="hidden" name="device_mobile"  x-model="items[1].pct">
+          <input type="hidden" name="device_tablet"  x-model="items[2].pct">
           <div class="space-y-2">
-            <template x-for="d in devices" :key="d.key">
+            <template x-for="(d, i) in items" :key="d.key">
               <div class="flex items-center gap-3">
                 <span class="text-sm text-slate-300 w-24 flex-shrink-0" x-text="d.icon+' '+d.label"></span>
-                <input type="range" min="0" max="100" x-model.number="d.pct" :name="'device_'+d.key" class="flex-1 accent-green-500"/>
+                <input type="range" min="0" max="100" x-model.number="d.pct"
+                  @input="slide(i)" class="flex-1 accent-green-500"/>
                 <span class="text-sm font-semibold text-white w-10 text-right" x-text="d.pct+'%'"></span>
               </div>
             </template>
@@ -67,29 +72,29 @@
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-white">Источники трафика</h2>
         <div class="flex items-center gap-3">
-          <span class="text-sm" :class="total===100?'text-green-400':'text-red-400'">
-            Итого: <span x-text="total"></span>%
+          <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
+            <span x-text="total"></span>%
           </span>
-          <button type="button" @click="addSource()"
-            class="text-sm text-blue-400 hover:text-blue-300">+ Добавить</button>
+          <button type="button" @click="add()"
+            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">+ Добавить</button>
         </div>
       </div>
-      <div class="space-y-2">
-        <template x-for="(src, i) in sources" :key="i">
-          <div class="flex items-center gap-3">
-            <select x-model="src.key" :name="'source_keys'"
-              style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
-              <optgroup label="Organic Search" style="background:rgb(15 23 42);">
+      <div class="space-y-3">
+        <template x-for="(s, i) in items" :key="i">
+          <div class="flex items-center gap-4">
+            <select x-model="s.key" name="source_keys"
+              style="width:13rem;flex-shrink:0;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
+              <optgroup label="Organic Search" style="background:rgb(15 23 42)">
                 <option value="google_organic">Google Organic</option>
                 <option value="bing_organic">Bing Organic</option>
                 <option value="duckduckgo_organic">DuckDuckGo</option>
                 <option value="yahoo_organic">Yahoo Organic</option>
                 <option value="youtube_organic">YouTube Organic</option>
               </optgroup>
-              <optgroup label="Paid" style="background:rgb(15 23 42);">
+              <optgroup label="Paid" style="background:rgb(15 23 42)">
                 <option value="google_cpc">Google Ads (CPC)</option>
               </optgroup>
-              <optgroup label="Social" style="background:rgb(15 23 42);">
+              <optgroup label="Social" style="background:rgb(15 23 42)">
                 <option value="instagram">Instagram</option>
                 <option value="facebook">Facebook</option>
                 <option value="linkedin">LinkedIn</option>
@@ -97,28 +102,27 @@
                 <option value="pinterest">Pinterest</option>
                 <option value="tiktok">TikTok</option>
               </optgroup>
-              <optgroup label="AI Chatbots" style="background:rgb(15 23 42);">
+              <optgroup label="AI Chatbots" style="background:rgb(15 23 42)">
                 <option value="chatgpt">ChatGPT</option>
                 <option value="perplexity">Perplexity AI</option>
                 <option value="gemini">Google Gemini</option>
                 <option value="copilot">Microsoft Copilot</option>
                 <option value="grok">Grok</option>
               </optgroup>
-              <optgroup label="Messengers" style="background:rgb(15 23 42);">
+              <optgroup label="Messengers" style="background:rgb(15 23 42)">
                 <option value="whatsapp">WhatsApp</option>
                 <option value="telegram">Telegram</option>
               </optgroup>
-              <optgroup label="Other" style="background:rgb(15 23 42);">
+              <optgroup label="Other" style="background:rgb(15 23 42)">
                 <option value="email">Email</option>
                 <option value="direct">Direct</option>
                 <option value="referral">Referral</option>
               </optgroup>
             </select>
-            <input type="number" :name="'source_percents'" x-model.number="src.pct"
-              min="0" max="100"
-              style="width:5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem;color:#fff;font-size:0.875rem;outline:none;text-align:center;"/>
-            <span class="text-xs text-slate-400">%</span>
-            <button type="button" @click="sources.splice(i,1)" class="text-slate-500 hover:text-red-400" style="flex-shrink:0;">✕</button>
+            <input type="range" min="0" max="100" x-model.number="s.pct" name="source_percents"
+              @input="slide(i)" class="flex-1 accent-blue-500"/>
+            <span class="text-sm font-semibold text-white w-10 text-right" x-text="s.pct+'%'"></span>
+            <button type="button" @click="remove(i)" class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
           </div>
         </template>
       </div>
@@ -128,29 +132,30 @@
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="geoForm()">
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-white">Гео-таргетинг</h2>
-        <button type="button" @click="addRow()"
-          class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Добавить страну
-        </button>
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
+            <span x-text="total"></span>%
+          </span>
+          <button type="button" @click="addRow()"
+            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">+ Страна</button>
+        </div>
       </div>
-      <div class="space-y-2">
-        <template x-for="(row, i) in rows" :key="i">
-          <div class="flex items-center gap-3">
-            <select :name="'geo_countries'" x-model="row.country"
-              style="flex:1;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.625rem 1rem;color:#fff;font-size:0.875rem;outline:none;min-width:0;">
+      <div class="space-y-3">
+        <template x-for="(row, i) in items" :key="i">
+          <div class="flex items-center gap-4">
+            <select name="geo_countries" x-model="row.country"
+              style="width:13rem;flex-shrink:0;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.5rem 0.75rem;color:#fff;font-size:0.8rem;outline:none;">
               {% for code, name in countries %}
               <option value="{{ code }}" style="background:rgb(15 23 42);color:#fff;">{{ name }}</option>
               {% endfor %}
             </select>
-            <input type="number" :name="'geo_percents'" x-model.number="row.percent"
-              min="0" max="100" placeholder="%"
-              style="width:5rem;background:rgb(15 23 42);border:1px solid rgb(71 85 105);border-radius:0.5rem;padding:0.625rem 0.5rem;color:#fff;font-size:0.875rem;outline:none;text-align:center;"/>
-            <button type="button" @click="rows.splice(i,1)" class="text-slate-500 hover:text-red-400 transition" style="flex-shrink:0;">✕</button>
+            <input type="range" min="0" max="100" x-model.number="row.pct" name="geo_percents"
+              @input="slide(i)" class="flex-1 accent-purple-500"/>
+            <span class="text-sm font-semibold text-white w-10 text-right" x-text="row.pct+'%'"></span>
+            <button type="button" @click="remove(i)" class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
           </div>
         </template>
       </div>
-      <p class="text-xs text-slate-500 mt-3">Сумма процентов должна быть 100%</p>
     </div>
 
     <button type="submit"
@@ -176,35 +181,81 @@ function projectForm() {
   return { dailyHits: 100 }
 }
 
-function deviceForm() {
+// ── Linked sliders: same logic as project_detail ──────────────
+function makeLinked(items) {
   return {
-    devices: [
-      { key: 'desktop', icon: '🖥', label: 'Desktop', pct: 100 },
-      { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: 0 },
-      { key: 'tablet',  icon: '📟', label: 'Tablet',  pct: 0 },
-    ],
-    get devTotal() { return this.devices.reduce((a,d)=>a+d.pct,0) },
-  }
+    items,
+    get total() { return this.items.reduce((a, b) => a + (b.pct || 0), 0); },
+
+    slide(idx) {
+      const val = Math.max(0, Math.min(100, this.items[idx].pct || 0));
+      this.items[idx].pct = val;
+      const rest = 100 - val;
+      const others = this.items.filter((_, i) => i !== idx);
+      if (!others.length) return;
+      const othersSum = others.reduce((a, b) => a + (b.pct || 0), 0);
+      if (othersSum === 0) {
+        const share = Math.floor(rest / others.length);
+        others.forEach((it, j) => {
+          it.pct = share + (j === 0 ? rest - share * others.length : 0);
+        });
+      } else {
+        let alloc = 0;
+        others.forEach((it, j) => {
+          if (j === others.length - 1) {
+            it.pct = Math.max(0, rest - alloc);
+          } else {
+            it.pct = Math.max(0, Math.round(it.pct / othersSum * rest));
+            alloc += it.pct;
+          }
+        });
+      }
+    },
+
+    remove(idx) {
+      this.items.splice(idx, 1);
+      if (!this.items.length) return;
+      const t = this.total;
+      if (t === 100) return;
+      if (t === 0) { this.items[0].pct = 100; return; }
+      let alloc = 0;
+      this.items.forEach((it, i) => {
+        if (i === this.items.length - 1) {
+          it.pct = Math.max(0, 100 - alloc);
+        } else {
+          it.pct = Math.max(0, Math.round(it.pct / t * 100));
+          alloc += it.pct;
+        }
+      });
+    }
+  };
+}
+
+function deviceForm() {
+  return makeLinked([
+    { key: 'desktop', icon: '🖥', label: 'Desktop', pct: 100 },
+    { key: 'mobile',  icon: '📱', label: 'Mobile',  pct: 0 },
+    { key: 'tablet',  icon: '📟', label: 'Tablet',  pct: 0 },
+  ]);
 }
 
 function sourcesForm() {
-  return {
-    sources: [
-      { key: 'google_organic', pct: 50 },
-      { key: 'instagram',      pct: 25 },
-      { key: 'direct',         pct: 15 },
-      { key: 'facebook',       pct: 10 },
-    ],
-    get total() { return this.sources.reduce((s,x)=>s+x.pct, 0) },
-    addSource() { this.sources.push({ key: 'google_organic', pct: 0 }) }
-  }
+  const base = makeLinked([
+    { key: 'google_organic', pct: 50 },
+    { key: 'instagram',      pct: 25 },
+    { key: 'direct',         pct: 15 },
+    { key: 'facebook',       pct: 10 },
+  ]);
+  return Object.assign(base, {
+    add() { this.items.push({ key: 'google_organic', pct: 0 }); }
+  });
 }
 
 function geoForm() {
-  return {
-    rows: [{ country: 'UA', percent: 100 }],
-    addRow() { this.rows.push({ country: 'DE', percent: 0 }) }
-  }
+  const base = makeLinked([{ country: 'UA', pct: 100 }]);
+  return Object.assign(base, {
+    addRow() { this.items.push({ country: 'DE', pct: 0 }); }
+  });
 }
 </script>
 {% endblock %}

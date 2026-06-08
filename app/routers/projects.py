@@ -215,11 +215,15 @@ def update_project(
     if not device:
         device = {"desktop": 100}
 
+    from sqlalchemy.orm.attributes import flag_modified
     project.name = name
     project.daily_hits = daily_hits
     project.device = device
     project.sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     project.geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
+    flag_modified(project, "device")
+    flag_modified(project, "sources")
+    flag_modified(project, "geo")
     db.commit()
     return RedirectResponse(f"/projects/{project_id}", status_code=302)
 
@@ -298,6 +302,8 @@ def delete_project(
     ).first()
     if not project:
         raise HTTPException(404)
+    # Delete related hit logs first to avoid FK constraint violation
+    db.query(models.HitLog).filter(models.HitLog.project_id == project_id).delete()
     db.delete(project)
     db.commit()
     return RedirectResponse("/dashboard", status_code=302)
