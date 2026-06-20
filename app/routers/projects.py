@@ -52,16 +52,45 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: models.User
 
 @router.get("/api/detect-ga", response_class=JSONResponse)
 def detect_ga(url: str, user: models.User = Depends(get_current_user)):
-    """Fetches the page and extracts GA4/GTM IDs from HTML."""
+    """
+    Extracts the GA4 Measurement ID (G-XXXX) from a site.
+
+    The G- ID is almost never in the page HTML directly — modern sites
+    load it through a tag loader (Google Tag GT-XXXX, GA4 gtag G-XXXX,
+    or a GTM container GTM-XXXX). So:
+      1. scan the HTML for any googletagmanager loader id (G-/GT-/AW-/GTM-);
+      2. fetch each loader script from googletagmanager.com and pull the
+         real G-XXXX destination id(s) out of it.
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0.0.0 Safari/537.36"
+    }
     try:
         if not url.startswith("http"):
             url = "https://" + url
-        resp = http_requests.get(url, timeout=10, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0.0.0 Safari/537.36"
-        })
-        html = resp.text
-        ga4_ids = list(set(re.findall(r'G-[A-Z0-9]{6,}', html)))
-        gtm_ids = list(set(re.findall(r'GTM-[A-Z0-9]{4,}', html)))
+        html = http_requests.get(url, timeout=10, headers=headers).text
+
+        ga4_ids = set(re.findall(r'G-[A-Z0-9]{6,}', html))
+        gtm_ids = set(re.findall(r'GTM-[A-Z0-9]{4,}', html))
+
+        # Tag loaders referenced in the HTML (gtag/js or gtm.js)
+        loader_ids = set(re.findall(r'(?:gtag/js|gtm\.js)\?id=([A-Z]{1,3}-[A-Z0-9]+)', html))
+        loader_ids |= gtm_ids
+
+        # Fetch each loader and pull the real G- destination id(s) out
+        for tag_id in loader_ids:
+            loader = "gtm.js" if tag_id.startswith("GTM-") else "gtag/js"
+            try:
+                script = http_requests.get(
+                    f"https://www.googletagmanager.com/{loader}?id={tag_id}",
+                    timeout=10, headers=headers,
+                ).text
+                ga4_ids.update(re.findall(r'G-[A-Z0-9]{6,}', script))
+            except Exception:
+                pass  # loader fetch failed — keep whatever we already have
+
+        ga4_ids = sorted(ga4_ids)
+        gtm_ids = sorted(gtm_ids)
         return {
             "ok": True,
             "ga4_id": ga4_ids[0] if ga4_ids else None,
