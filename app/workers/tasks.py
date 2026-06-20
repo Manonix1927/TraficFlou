@@ -34,6 +34,10 @@ def dispatch_hits():
                 db.commit()
                 continue
 
+            # Пропускаем проекты без источников/гео — иначе pick_weighted упадёт
+            if not project.sources or not project.geo:
+                continue
+
             # Сколько хитов отправить в эту минуту
             hits_per_minute = max(1, math.ceil(project.daily_hits / 1440))
             hits_to_send = min(hits_per_minute, user.credits)

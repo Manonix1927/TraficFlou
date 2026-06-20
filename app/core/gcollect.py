@@ -171,6 +171,11 @@ def send_hit(
 
 def pick_weighted(options: dict) -> str:
     """Pick a key from {key: weight%} dict randomly."""
+    if not options:
+        raise ValueError("pick_weighted called with empty options")
     keys = list(options.keys())
     weights = [options[k] for k in keys]
+    if sum(weights) <= 0:
+        # all-zero weights → uniform pick instead of crashing
+        return random.choice(keys)
     return random.choices(keys, weights=weights, k=1)[0]

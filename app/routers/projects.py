@@ -100,8 +100,13 @@ def create_project(
     sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
     device = {k: v for k, v in [("desktop", device_desktop), ("mobile", device_mobile), ("tablet", device_tablet)] if v > 0}
+    # Fallbacks — empty dicts would later crash pick_weighted()
     if not device:
         device = {"desktop": 100}
+    if not sources:
+        sources = {"google_organic": 100}
+    if not geo:
+        geo = {"UA": 100}
 
     project = models.Project(
         user_id=user.id,
@@ -212,15 +217,22 @@ def update_project(
         raise HTTPException(404)
 
     device = {k: v for k, v in [("desktop", device_desktop), ("mobile", device_mobile), ("tablet", device_tablet)] if v > 0}
+    sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
+    geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
+    # Fallbacks — empty dicts would later crash pick_weighted()
     if not device:
         device = {"desktop": 100}
+    if not sources:
+        sources = {"google_organic": 100}
+    if not geo:
+        geo = {"UA": 100}
 
     from sqlalchemy.orm.attributes import flag_modified
     project.name = name
     project.daily_hits = daily_hits
     project.device = device
-    project.sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
-    project.geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
+    project.sources = sources
+    project.geo = geo
     flag_modified(project, "device")
     flag_modified(project, "sources")
     flag_modified(project, "geo")
@@ -277,6 +289,8 @@ def send_now(
         raise HTTPException(404)
     if user.credits <= 0:
         raise HTTPException(400, "Недостаточно кредитов")
+    if not project.sources or not project.geo:
+        raise HTTPException(400, "Настройте источники трафика и гео-таргетинг")
 
     # Порция за 1 минуту
     count = min(max(1, math.ceil(project.daily_hits / 1440)), user.credits, 50)
