@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, JSON, Text
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, JSON, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -14,15 +14,15 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    projects = relationship("Project", back_populates="user")
-    transactions = relationship("CreditTransaction", back_populates="user")
+    projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("CreditTransaction", back_populates="user", cascade="all, delete-orphan")
 
 
 class Project(Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
     site_url = Column(String, nullable=False)
     ga_tid = Column(String, nullable=False)           # G-XXXXXXXX
@@ -50,14 +50,14 @@ class Project(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("User", back_populates="projects")
-    hit_logs = relationship("HitLog", back_populates="project")
+    hit_logs = relationship("HitLog", back_populates="project", cascade="all, delete-orphan")
 
 
 class HitLog(Base):
     __tablename__ = "hit_logs"
 
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     country = Column(String)
     source = Column(String)
     medium = Column(String)
@@ -66,12 +66,17 @@ class HitLog(Base):
 
     project = relationship("Project", back_populates="hit_logs")
 
+    # Stats query filters by project_id + created_at on every page load
+    __table_args__ = (
+        Index("ix_hitlog_project_created", "project_id", "created_at"),
+    )
+
 
 class CreditTransaction(Base):
     __tablename__ = "credit_transactions"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     amount = Column(Integer, nullable=False)          # + пополнение, - списание
     description = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -23,15 +23,22 @@
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">URL сайта</label>
-          <input name="site_url" required placeholder="https://example.com" class="input-field"/>
+          <input name="site_url" required placeholder="https://example.com" class="input-field" x-model="siteUrl"/>
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-1.5">GA4 Measurement ID</label>
-          <input name="ga_tid" required placeholder="G-XXXXXXXXXX" class="input-field"/>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-sm text-slate-400">GA4 Measurement ID</label>
+            <button type="button" @click="detectGa()" :disabled="detecting"
+              class="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50">
+              <span x-text="detecting ? 'Ищем…' : '⚡ Определить с сайта'"></span>
+            </button>
+          </div>
+          <input name="ga_tid" required placeholder="G-XXXXXXXXXX" class="input-field" x-model="gaTid"/>
+          <p class="text-xs mt-1" :class="detectMsgOk ? 'text-green-400' : 'text-red-400'" x-show="detectMsg" x-text="detectMsg"></p>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
-          <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field"/>
+          <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field" x-model="gtmId"/>
         </div>
       </div>
     </div>
@@ -178,7 +185,32 @@
 
 <script>
 function projectForm() {
-  return { dailyHits: 100 }
+  return {
+    dailyHits: 100,
+    siteUrl: '', gaTid: '', gtmId: '',
+    detecting: false, detectMsg: '', detectMsgOk: false,
+    async detectGa() {
+      if (!this.siteUrl) { this.detectMsg = 'Сначала введите URL сайта'; this.detectMsgOk = false; return; }
+      this.detecting = true; this.detectMsg = '';
+      try {
+        const r = await fetch('/api/detect-ga?url=' + encodeURIComponent(this.siteUrl));
+        if (r.redirected) { location.href = r.url; return; }
+        const data = await r.json();
+        if (data.ok && data.ga4_id) {
+          this.gaTid = data.ga4_id;
+          if (data.gtm_id) this.gtmId = data.gtm_id;
+          this.detectMsgOk = true; this.detectMsg = 'Найдено: ' + data.ga4_id + (data.gtm_id ? ' + ' + data.gtm_id : '');
+        } else {
+          this.detectMsgOk = false;
+          this.detectMsg = data.ok ? 'GA4 ID не найден на странице' : ('Ошибка: ' + (data.error || 'не удалось загрузить сайт'));
+        }
+      } catch(e) {
+        this.detectMsgOk = false; this.detectMsg = 'Ошибка запроса';
+      } finally {
+        this.detecting = false;
+      }
+    }
+  }
 }
 
 // ── Linked sliders: same logic as project_detail ──────────────

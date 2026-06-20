@@ -243,8 +243,17 @@ def update_project(
 def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_url: str, sources: dict, geo: dict, gtm_id: str, device=None):
     """Синхронная отправка хитов — используется для немедленного запуска."""
     from app.database import SessionLocal
+    from app.core.credits import reserve_credits, refund_credits
+    if not sources or not geo:
+        return
     db = SessionLocal()
     try:
+        # Атомарно резервируем кредиты до отправки (защита от overspend)
+        reserved = reserve_credits(db, user_id, count)
+        if reserved <= 0:
+            return
+        count = reserved
+
         def pick_dev(d):
             if isinstance(d, dict) and d:
                 return pick_weighted(d)
@@ -263,12 +272,12 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
                     ok += 1
                     logs.append(models.HitLog(
                         project_id=project_id, country=r.get("country"),
-                        source=r.get("source"), medium=r.get("source", ""), status=204,
+                        source=r.get("source"), medium=r.get("medium", "none"), status=204,
                     ))
         db.bulk_save_objects(logs)
-        user = db.query(models.User).filter(models.User.id == user_id).first()
+        # Возвращаем кредиты за неотправленные хиты
+        refund_credits(db, user_id, count - ok)
         project = db.query(models.Project).filter(models.Project.id == project_id).first()
-        if user: user.credits = max(0, user.credits - ok)
         if project: project.hits_sent = (project.hits_sent or 0) + ok
         db.commit()
     finally:
@@ -316,8 +325,7 @@ def delete_project(
     ).first()
     if not project:
         raise HTTPException(404)
-    # Delete related hit logs first to avoid FK constraint violation
-    db.query(models.HitLog).filter(models.HitLog.project_id == project_id).delete()
+    # hit_logs are removed via ORM cascade (Project.hit_logs delete-orphan)
     db.delete(project)
     db.commit()
     return RedirectResponse("/dashboard", status_code=302)

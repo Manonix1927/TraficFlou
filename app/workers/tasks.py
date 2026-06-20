@@ -76,15 +76,19 @@ def send_project_hits(
     """Отправляет hits_count хитов для одного проекта, списывает кредиты."""
     from app.database import SessionLocal
     from app import models
+    from app.core.credits import reserve_credits, refund_credits
+
+    if not sources or not geo:
+        return
 
     db = SessionLocal()
     try:
-        # Ещё раз проверим кредиты (race condition защита)
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        if not user or user.credits < hits_count:
-            hits_count = user.credits if user else 0
-        if hits_count <= 0:
+        # Атомарно резервируем кредиты ДО отправки — защита от overspend
+        # при параллельных воркерах. Неотправленные хиты вернём рефандом.
+        reserved = reserve_credits(db, user_id, hits_count)
+        if reserved <= 0:
             return
+        hits_count = reserved
 
         # Генерируем задания
         def pick_device(d):
@@ -115,18 +119,20 @@ def send_project_hits(
                         project_id=project_id,
                         country=result.get("country"),
                         source=result.get("source"),
-                        medium="organic",
+                        medium=result.get("medium", "none"),
                         status=204,
                     ))
 
         # Записываем логи пачкой
         db.bulk_save_objects(logs)
 
-        # Списываем кредиты и обновляем счётчик
-        user.credits -= ok_count
+        # Возвращаем кредиты за неудавшиеся хиты (зарезервировали больше, чем ушло)
+        refund_credits(db, user_id, hits_count - ok_count)
+
+        # Обновляем счётчик отправленного
         project = db.query(models.Project).filter(models.Project.id == project_id).first()
         if project:
-            project.hits_sent += ok_count
+            project.hits_sent = (project.hits_sent or 0) + ok_count
 
         db.commit()
         log.info("Project %s: sent %d/%d hits", project_id, ok_count, hits_count)

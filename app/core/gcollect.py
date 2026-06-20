@@ -163,10 +163,12 @@ def send_hit(
             params=params, headers=headers,
             proxies=proxies, timeout=15,
         )
-        return {"status": r.status_code, "cid": cid, "country": country_code, "source": traffic_source}
+        return {"status": r.status_code, "cid": cid, "country": country_code,
+                "source": traffic_source, "medium": medium or "none"}
     except Exception as e:
         log.error("Hit failed: %s", e)
-        return {"status": 0, "error": str(e), "country": country_code, "source": traffic_source}
+        return {"status": 0, "error": str(e), "country": country_code,
+                "source": traffic_source, "medium": medium or "none"}
 
 
 def pick_weighted(options: dict) -> str:

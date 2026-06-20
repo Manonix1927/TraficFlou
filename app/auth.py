@@ -8,7 +8,22 @@ from app.database import get_db
 from app import models
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
+_INSECURE_DEFAULTS = {
+    None, "",
+    "change-me-in-production",
+    "change-me-to-random-string-min-32-chars",
+    "trafficflow-secret-key-change-in-production",
+}
+SECRET_KEY = os.getenv("SECRET_KEY")
+if SECRET_KEY in _INSECURE_DEFAULTS:
+    # On a real deployment (Postgres) refuse to start with a guessable key —
+    # otherwise anyone can forge JWTs. Local SQLite dev gets a dev fallback.
+    if os.getenv("DATABASE_URL", "").startswith(("postgres://", "postgresql://")):
+        raise RuntimeError(
+            "SECRET_KEY env var must be set to a strong random value in production"
+        )
+    SECRET_KEY = "dev-only-insecure-key-do-not-use-in-production"
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 

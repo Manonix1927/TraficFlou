@@ -33,6 +33,11 @@ def register_page(request: Request):
 
 @router.post("/register")
 def register(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    # bcrypt silently truncates passwords beyond 72 bytes — validate explicitly
+    if len(password) < 6:
+        return templates.TemplateResponse("register.html", {"request": request, "error": "Пароль должен быть не короче 6 символов"})
+    if len(password.encode("utf-8")) > 72:
+        return templates.TemplateResponse("register.html", {"request": request, "error": "Пароль слишком длинный (макс. 72 байта)"})
     if db.query(models.User).filter(models.User.email == email).first():
         return templates.TemplateResponse("register.html", {"request": request, "error": "Email уже зарегистрирован"})
     user = models.User(email=email, password_hash=hash_password(password), credits=100)  # 100 кредитов при регистрации

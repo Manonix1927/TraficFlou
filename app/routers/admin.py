@@ -79,13 +79,7 @@ def delete_user(
     target = db.query(models.User).filter(models.User.id == uid).first()
     if not target:
         raise HTTPException(404)
-    db.query(models.HitLog).filter(
-        models.HitLog.project_id.in_(
-            db.query(models.Project.id).filter(models.Project.user_id == uid)
-        )
-    ).delete(synchronize_session=False)
-    db.query(models.Project).filter(models.Project.user_id == uid).delete()
-    db.query(models.CreditTransaction).filter(models.CreditTransaction.user_id == uid).delete()
+    # projects → hit_logs and transactions are removed via ORM cascade
     db.delete(target)
     db.commit()
     return RedirectResponse("/admin", status_code=302)
@@ -135,7 +129,7 @@ def admin_delete_project(
     if not project:
         raise HTTPException(404)
     uid = project.user_id
-    db.query(models.HitLog).filter(models.HitLog.project_id == pid).delete()
+    # hit_logs are removed via ORM cascade (Project.hit_logs delete-orphan)
     db.delete(project)
     db.commit()
     return RedirectResponse(f"/admin/users/{uid}", status_code=302)

@@ -16,6 +16,9 @@ def run_migrations():
         # Safe: try to convert device column string → jsonb, ignore errors
         """UPDATE projects SET device = '{\"desktop\":100}'
            WHERE device IS NULL OR device::text NOT LIKE '{%'""",
+        # Speeds up the per-project 24h stats query (IF NOT EXISTS works on
+        # both SQLite and PostgreSQL)
+        "CREATE INDEX IF NOT EXISTS ix_hitlog_project_created ON hit_logs (project_id, created_at)",
     ]
     with engine.connect() as conn:
         for sql in migrations:

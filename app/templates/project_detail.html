@@ -257,6 +257,14 @@ async function sendNow() {
   btn.disabled = true; label.textContent = 'Отправляем...';
   try {
     const r = await fetch('/projects/{{ project.id }}/send-now', {method:'POST'});
+    // Session expired → server redirects to /login; fetch follows it and
+    // returns HTML, so r.json() would throw. Detect and send user to login.
+    if (r.redirected) { location.href = r.url; return; }
+    if (!r.ok) {
+      let msg = 'Ошибка';
+      try { const e = await r.json(); if (e.detail) msg = e.detail; } catch(_) {}
+      label.textContent = msg; btn.disabled = false; return;
+    }
     const data = await r.json();
     if (data.ok) {
       label.textContent = '✓ Отправлено ' + data.count + ' хитов';
