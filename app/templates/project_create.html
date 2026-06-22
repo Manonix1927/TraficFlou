@@ -229,9 +229,7 @@ function projectForm() {
           this.gtmId = data.gtm_id || '';
           this.detectState = 'found';
         } else {
-          this.detectMsg = data.ok
-            ? 'Не удалось определить автоматически — введите GA4 ID вручную'
-            : ('Не удалось загрузить сайт (' + (data.error || 'ошибка') + ') — введите GA4 ID вручную');
+          this.detectMsg = 'Не удалось определить автоматически — введите GA4 ID вручную';
           this.detectState = 'manual';
         }
       } catch(e) {
