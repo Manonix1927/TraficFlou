@@ -11,7 +11,7 @@
     <p class="text-slate-400 text-sm mt-1">Настройте параметры трафика для вашего сайта</p>
   </div>
 
-  <form method="post" action="/projects/create" x-data="projectForm()" class="space-y-6">
+  <form method="post" action="/projects/create" x-data="projectForm()" @submit="onSubmit($event)" class="space-y-6">
 
     <!-- Basic info -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 space-y-4">
@@ -23,24 +23,45 @@
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">URL сайта</label>
-          <input name="site_url" required placeholder="https://example.com" class="input-field" x-model="siteUrl"/>
-        </div>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="block text-sm text-slate-400">GA4 Measurement ID</label>
-            <button type="button" @click="detectGa()" :disabled="detecting"
-              class="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50">
-              <span x-text="detecting ? 'Ищем…' : '⚡ Определить с сайта'"></span>
-            </button>
-          </div>
-          <input name="ga_tid" required placeholder="G-XXXXXXXXXX" class="input-field" x-model="gaTid"/>
-          <p class="text-xs mt-1" :class="detectMsgOk ? 'text-green-400' : 'text-red-400'" x-show="detectMsg" x-text="detectMsg"></p>
-        </div>
-        <div>
-          <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
-          <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field" x-model="gtmId"/>
+          <input name="site_url" required placeholder="https://example.com" class="input-field"
+            x-model="siteUrl" @change="detectGa()" @keydown.enter.prevent="detectGa()"/>
         </div>
       </div>
+
+      <!-- Detection status -->
+      <div x-show="detectState === 'detecting'" class="flex items-center gap-2 text-sm text-slate-400">
+        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 8h4z"></path></svg>
+        Определяем GA4 ID с сайта…
+      </div>
+      <div x-show="detectState === 'found'" class="flex items-center justify-between gap-3 text-sm bg-green-900/30 border border-green-700 rounded-lg px-4 py-2.5">
+        <span class="text-green-400">✓ GA4 ID определён: <span class="font-mono font-semibold" x-text="gaTid"></span><template x-if="gtmId"><span class="text-green-500/80"> · <span class="font-mono" x-text="gtmId"></span></span></template></span>
+        <button type="button" @click="detectState = 'manual'" class="text-xs text-slate-400 hover:text-white underline">изменить вручную</button>
+      </div>
+
+      <!-- Manual ID entry — hidden unless detection failed or user chose to edit.
+           x-if (not x-show) so these named inputs aren't in the DOM at the same
+           time as the hidden fallbacks below, which would double-submit ga_tid. -->
+      <template x-if="detectState === 'manual'">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-slate-400 mb-1.5">GA4 Measurement ID</label>
+            <input name="ga_tid" placeholder="G-XXXXXXXXXX" class="input-field" x-model="gaTid" required/>
+            <p class="text-xs mt-1 text-red-400" x-show="detectMsg" x-text="detectMsg"></p>
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
+            <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field" x-model="gtmId"/>
+          </div>
+        </div>
+      </template>
+
+      <!-- Hidden inputs keep detected values submitted while the manual block is collapsed -->
+      <template x-if="detectState !== 'manual'">
+        <div>
+          <input type="hidden" name="ga_tid" :value="gaTid">
+          <input type="hidden" name="gtm_id" :value="gtmId">
+        </div>
+      </template>
     </div>
 
     <!-- Traffic volume + device -->
@@ -188,27 +209,48 @@ function projectForm() {
   return {
     dailyHits: 100,
     siteUrl: '', gaTid: '', gtmId: '',
-    detecting: false, detectMsg: '', detectMsgOk: false,
+    detectState: 'idle',   // idle | detecting | found | manual
+    detectMsg: '',
+    _lastUrl: '',
+
     async detectGa() {
-      if (!this.siteUrl) { this.detectMsg = 'Сначала введите URL сайта'; this.detectMsgOk = false; return; }
-      this.detecting = true; this.detectMsg = '';
+      const url = (this.siteUrl || '').trim();
+      if (!url) return;                              // nothing entered yet
+      if (url === this._lastUrl && this.detectState === 'found') return; // already resolved
+      this._lastUrl = url;
+      this.detectState = 'detecting';
+      this.detectMsg = '';
       try {
-        const r = await fetch('/api/detect-ga?url=' + encodeURIComponent(this.siteUrl));
+        const r = await fetch('/api/detect-ga?url=' + encodeURIComponent(url));
         if (r.redirected) { location.href = r.url; return; }
         const data = await r.json();
         if (data.ok && data.ga4_id) {
           this.gaTid = data.ga4_id;
-          if (data.gtm_id) this.gtmId = data.gtm_id;
-          this.detectMsgOk = true; this.detectMsg = 'Найдено: ' + data.ga4_id + (data.gtm_id ? ' + ' + data.gtm_id : '');
+          this.gtmId = data.gtm_id || '';
+          this.detectState = 'found';
         } else {
-          this.detectMsgOk = false;
-          this.detectMsg = data.ok ? 'GA4 ID не найден на странице' : ('Ошибка: ' + (data.error || 'не удалось загрузить сайт'));
+          this.detectMsg = data.ok
+            ? 'Не удалось определить автоматически — введите GA4 ID вручную'
+            : ('Не удалось загрузить сайт (' + (data.error || 'ошибка') + ') — введите GA4 ID вручную');
+          this.detectState = 'manual';
         }
       } catch(e) {
-        this.detectMsgOk = false; this.detectMsg = 'Ошибка запроса';
-      } finally {
-        this.detecting = false;
+        this.detectMsg = 'Ошибка запроса — введите GA4 ID вручную';
+        this.detectState = 'manual';
       }
+    },
+
+    onSubmit(e) {
+      // Never submit without a GA4 ID — reveal the manual field instead.
+      if (this.gaTid && this.gaTid.trim()) return;
+      e.preventDefault();
+      if (this.detectState === 'detecting') return;  // wait for detection, then submit again
+      this.detectState = 'manual';
+      if (!this.detectMsg) this.detectMsg = 'Укажите GA4 Measurement ID';
+      this.$nextTick(() => {
+        const el = this.$root.querySelector('input[name=ga_tid]');
+        if (el) el.focus();
+      });
     }
   }
 }
