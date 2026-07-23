@@ -38,8 +38,14 @@ def dispatch_hits():
             if not project.sources or not project.geo:
                 continue
 
-            # Сколько хитов отправить в эту минуту
-            hits_per_minute = max(1, math.ceil(project.daily_hits / 1440))
+            # Сколько хитов отправить в эту минуту.
+            # daily_hits распределяем вероятностно по 1440 минутам суток,
+            # иначе ceil(...) с max(1, ...) даёт минимум 1 хит КАЖДУЮ минуту,
+            # то есть минимум 1440 хитов/день независимо от daily_hits.
+            expected_per_minute = project.daily_hits / 1440
+            hits_per_minute = math.floor(expected_per_minute)
+            if random.random() < (expected_per_minute - hits_per_minute):
+                hits_per_minute += 1
             hits_to_send = min(hits_per_minute, user.credits)
 
             if hits_to_send <= 0:
