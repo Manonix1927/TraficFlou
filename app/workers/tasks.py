@@ -6,6 +6,7 @@ Celery tasks — отправка GA4 хитов для активных про�
 import math
 import random
 import logging
+from datetime import datetime, time as dtime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.workers.celery_app import celery
 from app.core.gcollect import send_hit, pick_weighted
@@ -18,9 +19,16 @@ def dispatch_hits():
     """Главная задача: берёт все активные проекты и отправляет порцию хитов."""
     from app.database import SessionLocal
     from app import models
+    from sqlalchemy import func as sqlfunc
 
     db = SessionLocal()
     try:
+        # Начало текущих суток и доля суток, которая уже прошла (UTC —
+        # в нём же celery beat и server_default у HitLog.created_at)
+        now = datetime.utcnow()
+        day_start = datetime.combine(now.date(), dtime.min)
+        elapsed_fraction = (now - day_start).total_seconds() / 86400.0
+
         projects = (
             db.query(models.Project)
             .filter(models.Project.status == "active")
@@ -38,14 +46,41 @@ def dispatch_hits():
             if not project.sources or not project.geo:
                 continue
 
-            # Сколько хитов отправить в эту минуту.
-            # daily_hits распределяем вероятностно по 1440 минутам суток,
-            # иначе ceil(...) с max(1, ...) даёт минимум 1 хит КАЖДУЮ минуту,
-            # то есть минимум 1440 хитов/день независимо от daily_hits.
-            expected_per_minute = project.daily_hits / 1440
-            hits_per_minute = math.floor(expected_per_minute)
-            if random.random() < (expected_per_minute - hits_per_minute):
+            # Самокорректирующийся темп: сравниваем фактически отправленное
+            # с начала суток с целевым темпом и досылаем разницу. Так фейлы
+            # прокси и пропущенные тики beat не уменьшают дневной итог.
+            sent_today = (
+                db.query(sqlfunc.count(models.HitLog.id))
+                .filter(
+                    models.HitLog.project_id == project.id,
+                    models.HitLog.created_at >= day_start,
+                    models.HitLog.status == 204,
+                )
+                .scalar()
+            ) or 0
+
+            if sent_today >= project.daily_hits:
+                continue  # дневной план уже выполнен
+
+            target_by_now = project.daily_hits * elapsed_fraction
+            deficit = target_by_now - sent_today
+            if deficit <= 0:
+                continue  # идём с опережением графика
+
+            # Целую часть дефицита досылаем сразу, дробную — вероятностно,
+            # чтобы в среднем темп сходился точно к daily_hits.
+            hits_per_minute = math.floor(deficit)
+            if random.random() < (deficit - hits_per_minute):
                 hits_per_minute += 1
+
+            # Потолок на минуту: не более 10x среднего темпа (мин. 5) —
+            # чтобы после простоя не было резкого всплеска трафика.
+            burst_cap = max(5, math.ceil(project.daily_hits / 1440 * 10))
+            hits_per_minute = min(hits_per_minute, burst_cap)
+
+            # Не превышаем дневной план
+            hits_per_minute = min(hits_per_minute, project.daily_hits - sent_today)
+
             hits_to_send = min(hits_per_minute, user.credits)
 
             if hits_to_send <= 0:
