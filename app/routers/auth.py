@@ -44,7 +44,7 @@ def register(request: Request, email: str = Form(...), password: str = Form(...)
         return templates.TemplateResponse("register.html", {"request": request, "error": _err(request, "auth.err_password_long")})
     if db.query(models.User).filter(models.User.email == email).first():
         return templates.TemplateResponse("register.html", {"request": request, "error": _err(request, "auth.err_email_taken")})
-    user = models.User(email=email, password_hash=hash_password(password), credits=100)  # 100 кредитов при регистрации
+    user = models.User(email=email, password_hash=hash_password(password), credits=1000)  # 1000 кредитов при регистрации
     db.add(user)
     db.commit()
     token = create_token(user.id)
