@@ -52,6 +52,12 @@ class Project(Base):
         "UA": 100,
     })
 
+    # Цільові сторінки — за замовчуванням вимкнено, хіти йдуть на site_url.
+    # Коли увімкнено, для кожного хіта обирається сторінка з pages
+    # (вага у %), і саме її бачить GA4 у звіті "Сторінки".
+    pages_enabled = Column(Boolean, default=False)
+    pages = Column(JSON, default=lambda: {})           # {"/path": %}
+
     # Status
     status = Column(String, default="paused")         # active | paused | finished
     hits_sent = Column(Integer, default=0)
@@ -68,6 +74,12 @@ class Project(Base):
         """device всегда как {device: %} — колонка может вернуть строку."""
         from app.core.devices import normalize_device
         return normalize_device(self.device)
+
+    @property
+    def pages_map(self) -> dict:
+        """pages завжди як {шлях: %}, навіть якщо в колонці None/сміття."""
+        from app.core.pages import normalize_pages
+        return normalize_pages(self.pages)
 
 
 class HitLog(Base):

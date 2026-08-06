@@ -93,6 +93,16 @@ DEVICE_PROFILES = {
 }
 
 
+def build_page_url(site_url: str, path: str) -> str:
+    """Підміняє шлях у site_url на заданий, зберігаючи схему й хост."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    src = site_url if "://" in site_url else "https://" + site_url
+    parts = urlsplit(src)
+    clean_path = path if path.startswith("/") else "/" + path
+    return urlunsplit((parts.scheme, parts.netloc, clean_path, "", ""))
+
+
 def send_hit(
     tid: str,
     site_url: str,
@@ -101,6 +111,7 @@ def send_hit(
     campaign: str = None,
     gtm_id: str = None,
     device: str = "desktop",
+    page_path: str = None,
 ) -> dict:
     src_data = SOURCES.get(traffic_source, SOURCES["google_organic"])
     source, medium, referrer = src_data
@@ -110,10 +121,13 @@ def send_hit(
     ts = str(int(time.time() * 1000))
     dev = DEVICE_PROFILES.get(device, DEVICE_PROFILES["desktop"])
 
-    dl = site_url
+    # Цільова сторінка (якщо задана) — саме її GA4 покаже у звіті "Сторінки"
+    base_url = build_page_url(site_url, page_path) if page_path else site_url
+
+    dl = base_url
     if source and medium:
-        sep = "&" if "?" in site_url else "?"
-        dl = site_url + sep + "utm_source=" + source + "&utm_medium=" + medium
+        sep = "&" if "?" in base_url else "?"
+        dl = base_url + sep + "utm_source=" + source + "&utm_medium=" + medium
         if campaign:
             dl += "&utm_campaign=" + campaign
 

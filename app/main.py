@@ -55,6 +55,11 @@ def run_migrations():
             # дають ціни з копійками (наприклад, 246.50) — розширюємо тип,
             # інакше INSERT з дробовою сумою впаде.
             "ALTER TABLE payment_orders ALTER COLUMN amount TYPE NUMERIC(10,2)",
+            # Цільові сторінки — нова функція, за замовчуванням вимкнена
+            "ALTER TABLE projects ADD COLUMN IF NOT EXISTS pages_enabled BOOLEAN DEFAULT false",
+            "ALTER TABLE projects ADD COLUMN IF NOT EXISTS pages JSONB DEFAULT '{}'::jsonb",
+            "UPDATE projects SET pages_enabled = false WHERE pages_enabled IS NULL",
+            "UPDATE projects SET pages = '{}'::jsonb WHERE pages IS NULL",
         ] + common
     else:
         # SQLite: ADD COLUMN не поддерживает IF NOT EXISTS — если колонка
@@ -63,6 +68,9 @@ def run_migrations():
             "ALTER TABLE projects ADD COLUMN gtm_id VARCHAR",
             "ALTER TABLE projects ADD COLUMN device JSON",
             "UPDATE projects SET device = '{\"desktop\": 100}' WHERE device IS NULL",
+            "ALTER TABLE projects ADD COLUMN pages_enabled BOOLEAN DEFAULT 0",
+            "ALTER TABLE projects ADD COLUMN pages JSON",
+            "UPDATE projects SET pages = '{}' WHERE pages IS NULL",
         ] + common
 
     with engine.connect() as conn:

@@ -97,6 +97,8 @@ def dispatch_hits():
                 geo=project.geo,
                 gtm_id=project.gtm_id,
                 device=project.device or "desktop",
+                pages_enabled=project.pages_enabled,
+                pages=project.pages_map,
             )
     finally:
         db.close()
@@ -113,6 +115,8 @@ def send_project_hits(
     geo: dict,
     gtm_id: str = None,
     device: str = "desktop",
+    pages_enabled: bool = False,
+    pages: dict = None,
 ):
     """Отправляет hits_count хитов для одного проекта, списывает кредиты."""
     from app.database import SessionLocal
@@ -134,12 +138,15 @@ def send_project_hits(
         # Генерируем задания
         from app.core.devices import normalize_device
         device_map = normalize_device(device)
+        # Цільові сторінки — тільки якщо фіча увімкнена і список не порожній
+        target_pages = pages if (pages_enabled and pages) else None
 
         jobs = []
         for _ in range(hits_count):
             country = pick_weighted(geo)
             source = pick_weighted(sources)
-            jobs.append((tid, site_url, country, source, None, gtm_id, pick_weighted(device_map)))
+            page_path = pick_weighted(target_pages) if target_pages else None
+            jobs.append((tid, site_url, country, source, None, gtm_id, pick_weighted(device_map), page_path))
 
         # Параллельная отправка
         ok_count = 0

@@ -186,6 +186,46 @@
       </div>
     </div>
 
+    <!-- Target pages -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="pagesForm()">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="font-semibold text-white">{{ t('proj.pages') }}</h2>
+        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+          <input type="checkbox" name="pages_enabled" x-model="enabled" class="w-4 h-4 accent-orange-500">
+          {{ t('proj.pages_enable') }}
+        </label>
+      </div>
+      <p class="text-xs text-slate-500 mb-4">{{ t('proj.pages_hint') }}</p>
+
+      <template x-if="enabled">
+        <div>
+          <div class="flex items-center justify-end gap-3 mb-3">
+            <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
+              <span x-text="total"></span>%
+            </span>
+            <button type="button" @click="add()"
+              class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">
+              + {{ t('proj.add') }}
+            </button>
+          </div>
+          <div class="space-y-3">
+            <template x-for="(row, i) in items" :key="i">
+              <div class="flex items-center gap-4">
+                <input type="text" x-model="row.path" name="page_paths"
+                  placeholder="{{ t('proj.pages_path_placeholder') }}"
+                  class="input-field font-mono text-sm" style="width:16rem;flex-shrink:0;"/>
+                <input type="range" min="0" max="100" x-model.number="row.pct" name="page_percents"
+                  @input="slide(i)" class="flex-1 accent-orange-500"/>
+                <span class="text-sm font-semibold text-white w-10 text-right" x-text="row.pct+'%'"></span>
+                <button type="button" @click="remove(i)"
+                  class="text-slate-500 hover:text-red-400 text-lg leading-none" style="flex-shrink:0;">✕</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
     <button type="submit"
       class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition">
       {{ t('proj.create_btn') }}
@@ -327,6 +367,15 @@ function geoForm() {
   const base = makeLinked([{ country: 'UA', pct: 100 }]);
   return Object.assign(base, {
     addRow() { this.items.push({ country: 'DE', pct: 0 }); }
+  });
+}
+
+// ── Target pages — вимкнено за замовчуванням ──────────────────
+function pagesForm() {
+  const base = makeLinked([{ path: '/', pct: 100 }]);
+  return Object.assign(base, {
+    enabled: false,
+    add() { this.items.push({ path: '/', pct: 0 }); }
   });
 }
 </script>

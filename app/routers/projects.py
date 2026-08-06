@@ -10,6 +10,7 @@ from app.database import get_db
 from app import models
 from app.auth import get_current_user
 from app.core.gcollect import send_hit, pick_weighted
+from app.core.pages import normalize_pages
 
 router = APIRouter()
 from app.core.templating import templates
@@ -179,12 +180,16 @@ def create_project(
     source_percents: list = Form(...),
     geo_countries: list = Form(...),
     geo_percents: list = Form(...),
+    pages_enabled: str = Form(""),
+    page_paths: list = Form([]),
+    page_percents: list = Form([]),
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
     sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
     device = {k: v for k, v in [("desktop", device_desktop), ("mobile", device_mobile), ("tablet", device_tablet)] if v > 0}
+    pages = normalize_pages({p: w for p, w in zip(page_paths, page_percents)})
     # Fallbacks — empty dicts would later crash pick_weighted()
     if not device:
         device = {"desktop": 100}
@@ -203,6 +208,8 @@ def create_project(
         device=device,
         sources=sources,
         geo=geo,
+        pages_enabled=pages_enabled in ("on", "true", "1"),
+        pages=pages,
         status="paused",
     )
     db.add(project)
@@ -351,6 +358,9 @@ def update_project(
     source_percents: list = Form(...),
     geo_countries: list = Form(...),
     geo_percents: list = Form(...),
+    pages_enabled: str = Form(""),
+    page_paths: list = Form([]),
+    page_percents: list = Form([]),
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
@@ -363,6 +373,7 @@ def update_project(
     device = {k: v for k, v in [("desktop", device_desktop), ("mobile", device_mobile), ("tablet", device_tablet)] if v > 0}
     sources = {k: int(p) for k, p in zip(source_keys, source_percents) if int(p) > 0}
     geo = {c: int(p) for c, p in zip(geo_countries, geo_percents) if int(p) > 0}
+    pages = normalize_pages({p: w for p, w in zip(page_paths, page_percents)})
     # Fallbacks — empty dicts would later crash pick_weighted()
     if not device:
         device = {"desktop": 100}
@@ -377,14 +388,17 @@ def update_project(
     project.device = device
     project.sources = sources
     project.geo = geo
+    project.pages_enabled = pages_enabled in ("on", "true", "1")
+    project.pages = pages
     flag_modified(project, "device")
     flag_modified(project, "sources")
     flag_modified(project, "geo")
+    flag_modified(project, "pages")
     db.commit()
     return RedirectResponse(f"/projects/{project_id}", status_code=302)
 
 
-def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_url: str, sources: dict, geo: dict, gtm_id: str, device=None):
+def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_url: str, sources: dict, geo: dict, gtm_id: str, device=None, pages_enabled: bool = False, pages: dict = None):
     """Синхронная отправка хитов — используется для немедленного запуска."""
     from app.database import SessionLocal
     from app.core.credits import reserve_credits, refund_credits
@@ -400,8 +414,17 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
 
         from app.core.devices import normalize_device
         device_map = normalize_device(device)
+        # Цільові сторінки — тільки якщо фіча увімкнена і список не порожній,
+        # інакше кожен хіт іде на site_url без підміни шляху
+        target_pages = pages if (pages_enabled and pages) else None
 
-        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id, pick_weighted(device_map)) for _ in range(count)]
+        jobs = [
+            (
+                tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id,
+                pick_weighted(device_map), pick_weighted(target_pages) if target_pages else None,
+            )
+            for _ in range(count)
+        ]
         ok = 0
         logs = []
         with ThreadPoolExecutor(max_workers=10) as ex:
@@ -450,6 +473,7 @@ def send_now(
         tid=project.ga_tid, site_url=project.site_url,
         sources=project.sources, geo=project.geo, gtm_id=project.gtm_id,
         device=project.device,
+        pages_enabled=project.pages_enabled, pages=project.pages_map,
     )
     return JSONResponse({"ok": True, "count": count})
 
