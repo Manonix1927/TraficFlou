@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ project.name }} — TrafficFlow{% endblock %}
+{% block title %}{{ project.name }} — {{ t('brand.name') }}{% endblock %}
 {% block content %}
-<div class="p-8" x-data="projectDetail()">
+<div class="p-8">
 
   <!-- ── Header ── -->
   <div class="flex items-center justify-between mb-6">
     <div>
       <a href="/dashboard" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 mb-3">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Все проекты
+        {{ t('proj.all_projects') }}
       </a>
       <div class="flex items-center gap-3">
         <div class="w-3 h-3 rounded-full {% if project.status == 'active' %}bg-green-400 shadow-lg shadow-green-400/50{% else %}bg-slate-500{% endif %}"></div>
@@ -16,7 +16,7 @@
         <span class="text-xs px-2.5 py-1 rounded-full font-medium
           {% if project.status == 'active' %}bg-green-900/50 text-green-400 border border-green-700
           {% else %}bg-slate-700 text-slate-300 border border-slate-600{% endif %}">
-          {% if project.status == 'active' %}Активен{% else %}Пауза{% endif %}
+          {% if project.status == 'active' %}{{ t('dash.status_active') }}{% else %}{{ t('dash.status_paused') }}{% endif %}
         </span>
       </div>
       <p class="text-slate-400 text-sm mt-1">{{ project.site_url }} · <span class="text-blue-400 font-mono">{{ project.ga_tid }}</span></p>
@@ -25,12 +25,12 @@
       <button id="sendNowBtn" onclick="sendNow()"
         class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 text-white transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        <span id="sendNowLabel">Отправить сейчас</span>
+        <span id="sendNowLabel">{{ t('proj.send_now') }}</span>
       </button>
       <form method="post" action="/projects/{{ project.id }}/toggle">
         <button type="submit" class="px-5 py-2.5 rounded-xl font-semibold text-sm transition
           {% if project.status == 'active' %}bg-slate-700 hover:bg-slate-600 text-white{% else %}bg-green-600 hover:bg-green-500 text-white{% endif %}">
-          {% if project.status == 'active' %}⏸ Пауза{% else %}▶ Запустить{% endif %}
+          {% if project.status == 'active' %}⏸ {{ t('proj.pause') }}{% else %}▶ {{ t('proj.resume') }}{% endif %}
         </button>
       </form>
     </div>
@@ -39,15 +39,15 @@
   <!-- ── Top stats ── -->
   <div class="grid grid-cols-4 gap-4 mb-6">
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs uppercase tracking-wide">Отправлено хитов</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">{{ t('proj.hits_sent') }}</p>
       <p class="text-3xl font-bold text-white mt-2">{{ project.hits_sent }}</p>
     </div>
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs uppercase tracking-wide">Баланс кредитов</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">{{ t('proj.credit_balance') }}</p>
       <p class="text-3xl font-bold {% if user.credits > 100 %}text-white{% else %}text-red-400{% endif %} mt-2">{{ user.credits }}</p>
     </div>
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs uppercase tracking-wide">По странам (24ч)</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">{{ t('proj.by_country') }}</p>
       {% if stats_country %}
         {% set max_c = stats_country | map(attribute=1) | max %}
         {% for country, count in stats_country[:3] %}
@@ -60,11 +60,11 @@
         </div>
         {% endfor %}
       {% else %}
-        <p class="text-slate-500 text-xs mt-3">Нет данных</p>
+        <p class="text-slate-500 text-xs mt-3">{{ t('chart.no_data') }}</p>
       {% endif %}
     </div>
     <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <p class="text-slate-400 text-xs uppercase tracking-wide">По источникам (24ч)</p>
+      <p class="text-slate-400 text-xs uppercase tracking-wide">{{ t('proj.by_source') }}</p>
       {% if stats_source %}
         {% set max_s = stats_source | map(attribute=1) | max %}
         {% for source, count in stats_source[:3] %}
@@ -77,8 +77,51 @@
         </div>
         {% endfor %}
       {% else %}
-        <p class="text-slate-500 text-xs mt-3">Нет данных</p>
+        <p class="text-slate-500 text-xs mt-3">{{ t('chart.no_data') }}</p>
       {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Live traffic chart ── -->
+  <div class="rounded-xl border border-slate-700 p-6 mb-6"
+       style="background: linear-gradient(160deg, rgb(23 20 38) 0%, rgb(17 15 28) 100%);"
+       x-data="liveChart({{ project.id }})" x-init="start()">
+    <div class="flex items-start justify-between flex-wrap gap-4 mb-5">
+      <div>
+        <p class="text-slate-400 text-xs uppercase tracking-[0.15em] font-mono">
+          {{ t('chart.title') }} · {{ project.site_url|replace('https://','')|replace('http://','')|trim('/') }}
+        </p>
+        <div class="flex items-baseline gap-3 mt-2">
+          <span class="text-4xl font-bold text-white" x-text="current"></span>
+          <span class="text-sm text-slate-400">{{ t('chart.per_minute') }}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="flex items-center gap-2 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
+          {{ t('chart.live') }}
+        </span>
+        <div class="flex gap-1 bg-slate-900/60 rounded-lg p-1">
+          <button type="button" @click="setRange(60)"
+            class="text-xs font-semibold px-3 py-1.5 rounded-md transition"
+            :class="minutes === 60 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'">
+            60m
+          </button>
+          <button type="button" @click="setRange(1440)"
+            class="text-xs font-semibold px-3 py-1.5 rounded-md transition"
+            :class="minutes === 1440 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'">
+            24h
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="relative" style="height: 260px;">
+      <canvas id="trafficChart"></canvas>
+      <div x-show="empty" x-cloak
+        class="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
+        {{ t('chart.no_data') }}
+      </div>
     </div>
   </div>
 
@@ -88,7 +131,7 @@
 
     <!-- 1. Traffic volume -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
-      <h2 class="font-semibold text-white mb-4">Объём трафика</h2>
+      <h2 class="font-semibold text-white mb-4">{{ t('proj.volume') }}</h2>
       <div class="flex items-center gap-6">
         <div class="flex-1">
           <input type="range" name="daily_hits" min="10" max="100000" step="10"
@@ -98,7 +141,7 @@
         </div>
         <div class="text-center w-28">
           <p class="text-3xl font-bold text-blue-400" id="hits_val">{{ project.daily_hits }}</p>
-          <p class="text-xs text-slate-400">хитов в день</p>
+          <p class="text-xs text-slate-400">{{ t('proj.per_day_short') }}</p>
         </div>
       </div>
       <div class="flex justify-between text-xs text-slate-500 mt-1">
@@ -109,14 +152,14 @@
     <!-- 2. Traffic sources -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="sourcesForm()">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-semibold text-white">Источники трафика</h2>
+        <h2 class="font-semibold text-white">{{ t('proj.sources') }}</h2>
         <div class="flex items-center gap-3">
           <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
             <span x-text="total"></span>%
           </span>
           <button type="button" @click="add()"
             class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">
-            + Добавить
+            + {{ t('proj.add') }}
           </button>
         </div>
       </div>
@@ -174,7 +217,7 @@
     <!-- 3. Device -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="deviceForm()">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-semibold text-white">Тип устройства</h2>
+        <h2 class="font-semibold text-white">{{ t('proj.device') }}</h2>
         <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
           <span x-text="total"></span>%
         </span>
@@ -202,14 +245,14 @@
     <!-- 4. Geo -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6" x-data="geoForm()">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-semibold text-white">Гео-таргетинг</h2>
+        <h2 class="font-semibold text-white">{{ t('proj.geo') }}</h2>
         <div class="flex items-center gap-3">
           <span class="text-sm font-semibold" :class="total===100?'text-green-400':'text-red-400'">
             <span x-text="total"></span>%
           </span>
           <button type="button" @click="addRow()"
             class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">
-            + Страна
+            + {{ t('proj.add_country') }}
           </button>
         </div>
       </div>
@@ -271,6 +314,129 @@ async function sendNow() {
       setTimeout(() => location.reload(), 2000);
     } else { label.textContent = 'Ошибка'; btn.disabled = false; }
   } catch(e) { label.textContent = 'Ошибка'; btn.disabled = false; }
+}
+
+// ── Live traffic chart ───────────────────────────────────────
+// ВАЖНО: інстанс Chart.js тримаємо в замиканні, а не в об'єкті Alpine.
+// Alpine загортає свої дані в реактивний Proxy, і Chart.js під ним
+// ламається — не створюються шкали, лінія не малюється взагалі.
+function liveChart(projectId) {
+  let chart = null;
+  let timer = null;
+
+  // Помаранчево-рожево-фіолетовий градієнт лінії, як на лендінгу
+  function lineGradient(ctx, area) {
+    const g = ctx.createLinearGradient(area.left, 0, area.right, 0);
+    g.addColorStop(0,    '#f97316');
+    g.addColorStop(0.45, '#ec4899');
+    g.addColorStop(1,    '#8b5cf6');
+    return g;
+  }
+
+  function fillGradient(ctx, area) {
+    const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    g.addColorStop(0, 'rgba(236, 72, 153, 0.28)');
+    g.addColorStop(1, 'rgba(236, 72, 153, 0)');
+    return g;
+  }
+
+  function build() {
+    const canvas = document.getElementById('trafficChart');
+    if (!canvas || typeof Chart === 'undefined') return null;
+
+    return new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels: [], datasets: [{
+        data: [],
+        borderWidth: 2.5,
+        tension: 0.4,               // згладжена крива
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#ec4899',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+        fill: true,
+        borderColor: (c) => {
+          const area = c.chart.chartArea;
+          return area ? lineGradient(c.chart.ctx, area) : '#ec4899';
+        },
+        backgroundColor: (c) => {
+          const area = c.chart.chartArea;
+          return area ? fillGradient(c.chart.ctx, area) : 'transparent';
+        },
+      }]},
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 600 },
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            borderColor: 'rgb(51 65 85)',
+            borderWidth: 1,
+            padding: 10,
+            displayColors: false,
+            callbacks: { label: (c) => c.parsed.y + ' {{ t("proj.hits") }}' },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: 'rgb(100 116 139)', font: { size: 10 },
+              maxRotation: 0, autoSkip: true, maxTicksLimit: 8,
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(148, 163, 184, 0.08)' },
+            border: { display: false },
+            ticks: {
+              color: 'rgb(100 116 139)', font: { size: 10 },
+              precision: 0, maxTicksLimit: 5,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  return {
+    minutes: 60,
+    current: 0,
+    empty: true,
+
+    start() {
+      chart = build();
+      this.load();
+      // Хіти йдуть раз на хвилину — частіше опитувати немає сенсу
+      timer = setInterval(() => this.load(), 30000);
+      window.addEventListener('beforeunload', () => clearInterval(timer));
+    },
+
+    setRange(m) {
+      if (this.minutes === m) return;
+      this.minutes = m;
+      this.load();
+    },
+
+    async load() {
+      try {
+        const r = await fetch(`/projects/${projectId}/api/timeline?minutes=${this.minutes}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        this.current = data.current || 0;
+        this.empty = !data.total;
+        if (!chart) return;
+        chart.data.labels = data.points.map(p => p.t);
+        chart.data.datasets[0].data = data.points.map(p => p.v);
+        chart.update();
+      } catch (e) { /* мережа відпала — лишаємо попередні дані */ }
+    },
+  };
 }
 
 // ── Linked sliders: moving one redistributes the rest, sum stays 100 ──────

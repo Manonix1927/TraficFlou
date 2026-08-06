@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/admin")
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templating import templates
 
 
 def require_admin(user: models.User = Depends(get_current_user)) -> models.User:
@@ -27,6 +26,71 @@ def admin_index(
     return templates.TemplateResponse("admin/users.html", {
         "request": request, "user": user, "users": users,
     })
+
+
+# ── Payment orders ────────────────────────────────────────────
+@router.get("/orders", response_class=HTMLResponse)
+def admin_orders(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(require_admin),
+):
+    orders = (
+        db.query(models.PaymentOrder)
+        .order_by(models.PaymentOrder.id.desc())
+        .limit(200)
+        .all()
+    )
+    return templates.TemplateResponse("admin/orders.html", {
+        "request": request, "user": user, "orders": orders,
+    })
+
+
+@router.post("/orders/{oid}/confirm")
+def confirm_order(
+    oid: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(require_admin),
+):
+    """Підтвердження надходження коштів — нараховуємо кредити."""
+    from datetime import datetime
+
+    order = db.query(models.PaymentOrder).filter(models.PaymentOrder.id == oid).first()
+    if not order:
+        raise HTTPException(404)
+    # Захист від подвійного нарахування при повторному сабміті
+    if order.status == "paid":
+        return RedirectResponse("/admin/orders", status_code=302)
+
+    target = db.query(models.User).filter(models.User.id == order.user_id).first()
+    if not target:
+        raise HTTPException(404)
+
+    target.credits = (target.credits or 0) + order.credits
+    order.status = "paid"
+    order.paid_at = datetime.utcnow()
+    db.add(models.CreditTransaction(
+        user_id=order.user_id,
+        amount=order.credits,
+        description=f"Оплата замовлення #{order.id} ({order.plan_name})",
+    ))
+    db.commit()
+    return RedirectResponse("/admin/orders", status_code=302)
+
+
+@router.post("/orders/{oid}/cancel")
+def admin_cancel_order(
+    oid: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(require_admin),
+):
+    order = db.query(models.PaymentOrder).filter(models.PaymentOrder.id == oid).first()
+    if not order:
+        raise HTTPException(404)
+    if order.status == "pending":
+        order.status = "cancelled"
+        db.commit()
+    return RedirectResponse("/admin/orders", status_code=302)
 
 
 # ── User detail ───────────────────────────────────────────────

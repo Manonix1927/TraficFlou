@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ t('admin.orders') }} — {{ t('brand.name') }}{% endblock %}
+{% block content %}
+<div class="p-8">
+
+  <div class="flex items-center gap-4 mb-6">
+    <a href="/admin" class="text-slate-400 hover:text-white text-sm">← {{ t('admin.users') }}</a>
+  </div>
+  <h1 class="text-2xl font-bold text-white mb-6">{{ t('admin.orders') }}</h1>
+
+  {% if orders %}
+  <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-medium">#</th>
+          <th class="text-left px-5 py-3 font-medium">{{ t('admin.user') }}</th>
+          <th class="text-left px-5 py-3 font-medium">{{ t('billing.plan') }}</th>
+          <th class="text-left px-5 py-3 font-medium">{{ t('admin.credits') }}</th>
+          <th class="text-left px-5 py-3 font-medium">{{ t('billing.amount') }}</th>
+          <th class="text-left px-5 py-3 font-medium">{{ t('billing.status') }}</th>
+          <th class="text-left px-5 py-3 font-medium">{{ t('billing.date') }}</th>
+          <th class="text-right px-5 py-3 font-medium">{{ t('admin.actions') }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-700">
+        {% for order in orders %}
+        <tr class="hover:bg-slate-700/30 transition">
+          <td class="px-5 py-3 text-slate-400 font-mono">{{ order.id }}</td>
+          <td class="px-5 py-3">
+            <a href="/admin/users/{{ order.user_id }}" class="text-blue-400 hover:underline">
+              {{ order.user.email if order.user else order.user_id }}
+            </a>
+          </td>
+          <td class="px-5 py-3 text-white">{{ order.plan_name }}</td>
+          <td class="px-5 py-3 text-slate-300">{{ '{:,}'.format(order.credits).replace(',', ' ') }}</td>
+          <td class="px-5 py-3 text-slate-300">{{ order.amount }} {{ order.currency }}</td>
+          <td class="px-5 py-3">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium
+              {% if order.status == 'paid' %}bg-green-900/50 text-green-400 border border-green-700
+              {% elif order.status == 'cancelled' %}bg-slate-700 text-slate-400 border border-slate-600
+              {% else %}bg-amber-900/40 text-amber-400 border border-amber-700{% endif %}">
+              {% if order.status == 'paid' %}{{ t('billing.status_paid') }}
+              {% elif order.status == 'cancelled' %}{{ t('billing.status_cancelled') }}
+              {% else %}{{ t('billing.status_pending') }}{% endif %}
+            </span>
+          </td>
+          <td class="px-5 py-3 text-slate-400">
+            {{ order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else '—' }}
+          </td>
+          <td class="px-5 py-3">
+            {% if order.status == 'pending' %}
+            <div class="flex items-center justify-end gap-2">
+              <form method="post" action="/admin/orders/{{ order.id }}/confirm">
+                <button type="submit"
+                  class="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                  {{ t('admin.confirm_payment') }}
+                </button>
+              </form>
+              <form method="post" action="/admin/orders/{{ order.id }}/cancel">
+                <button type="submit"
+                  class="text-slate-500 hover:text-red-400 text-xs transition px-2">
+                  {{ t('common.cancel') }}
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-slate-800 rounded-xl border border-slate-700 p-10 text-center">
+    <p class="text-slate-400 text-sm">{{ t('billing.no_orders') }}</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

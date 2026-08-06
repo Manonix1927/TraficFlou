@@ -16,6 +16,7 @@ class User(Base):
 
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     transactions = relationship("CreditTransaction", back_populates="user", cascade="all, delete-orphan")
+    orders = relationship("PaymentOrder", back_populates="user", cascade="all, delete-orphan")
 
 
 class Project(Base):
@@ -76,6 +77,30 @@ class HitLog(Base):
     __table_args__ = (
         Index("ix_hitlog_project_created", "project_id", "created_at"),
     )
+
+
+class PaymentOrder(Base):
+    """Замовлення на поповнення балансу — оплата на реквізити ФОП."""
+
+    __tablename__ = "payment_orders"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    plan_key = Column(String, nullable=False)
+    plan_name = Column(String)
+    credits = Column(Integer, nullable=False)
+    amount = Column(Integer, nullable=False)            # у гривнях
+    currency = Column(String, default="UAH")
+    status = Column(String, default="pending")          # pending | paid | cancelled
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="orders")
+
+    @property
+    def purpose(self) -> str:
+        """Призначення платежу — за ним звіряємо оплату."""
+        return f"Поповнення балансу, замовлення #{self.id}"
 
 
 class CreditTransaction(Base):

@@ -5,7 +5,6 @@ import requests as http_requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Depends, Request, Form, HTTPException, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
@@ -13,7 +12,7 @@ from app.auth import get_current_user
 from app.core.gcollect import send_hit, pick_weighted
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+from app.core.templating import templates
 
 SOURCE_LABELS = {
     "google_organic": "Google Organic", "bing_organic": "Bing Organic",
@@ -198,6 +197,65 @@ def project_detail(
         "countries": COUNTRIES,
         "stats_country": stats_country,
         "stats_source": stats_source_labeled,
+    })
+
+
+@router.get("/projects/{project_id}/api/timeline", response_class=JSONResponse)
+def project_timeline(
+    project_id: int,
+    minutes: int = 60,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """Кліки по хвилинах за останні `minutes` — для живого графіка."""
+    from datetime import datetime, timedelta
+
+    project = db.query(models.Project).filter(
+        models.Project.id == project_id,
+        models.Project.user_id == user.id,
+    ).first()
+    if not project:
+        raise HTTPException(404)
+
+    minutes = max(5, min(minutes, 1440))
+    now = datetime.utcnow().replace(second=0, microsecond=0)
+    since = now - timedelta(minutes=minutes - 1)
+
+    rows = (
+        db.query(models.HitLog.created_at)
+        .filter(
+            models.HitLog.project_id == project_id,
+            models.HitLog.created_at >= since,
+            models.HitLog.status == 204,
+        )
+        .all()
+    )
+
+    # Розкладаємо по хвилинних кошиках у Python — не залежимо від
+    # date_trunc/strftime, які відрізняються в SQLite та PostgreSQL.
+    buckets = {}
+    for (created,) in rows:
+        if created is None:
+            continue
+        if created.tzinfo is not None:
+            created = created.replace(tzinfo=None)
+        key = int((created.replace(second=0, microsecond=0) - since).total_seconds() // 60)
+        if 0 <= key < minutes:
+            buckets[key] = buckets.get(key, 0) + 1
+
+    points = [
+        {
+            "t": (since + timedelta(minutes=i)).strftime("%H:%M"),
+            "v": buckets.get(i, 0),
+        }
+        for i in range(minutes)
+    ]
+    total = sum(b["v"] for b in points)
+    return JSONResponse({
+        "points": points,
+        "total": total,
+        "current": points[-1]["v"] if points else 0,
+        "peak": max((b["v"] for b in points), default=0),
     })
 
 

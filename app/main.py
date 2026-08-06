@@ -4,7 +4,7 @@ load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from app.database import Base, engine
-from app.routers import auth, projects, admin
+from app.routers import auth, projects, admin, billing
 from sqlalchemy import text
 
 Base.metadata.create_all(bind=engine)
@@ -74,13 +74,38 @@ try:
 except Exception:
     pass  # SQLite doesn't support IF NOT EXISTS — fine for local dev
 
-app = FastAPI(title="TrafficFlow")
+app = FastAPI(title="TrafficStream")
 
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(billing.router)
 app.include_router(admin.router)
 
 
 @app.get("/")
 def root():
     return RedirectResponse("/dashboard")
+
+
+@app.get("/lang/{code}")
+def set_language(code: str, request: Request):
+    """Перемикач мови — зберігаємо в cookie і повертаємось на ту саму сторінку."""
+    from app.core.i18n import TRANSLATIONS
+
+    back = request.headers.get("referer") or "/dashboard"
+    # Тільки внутрішні переходи — щоб referer не став open redirect
+    if "://" in back:
+        from urllib.parse import urlparse
+        parsed = urlparse(back)
+        back = parsed.path + (("?" + parsed.query) if parsed.query else "")
+    if not back.startswith("/"):
+        back = "/dashboard"
+
+    response = RedirectResponse(back, status_code=302)
+    if code in TRANSLATIONS:
+        response.set_cookie(
+            "lang", code,
+            max_age=60 * 60 * 24 * 365,
+            httponly=False, samesite="lax",
+        )
+    return response
