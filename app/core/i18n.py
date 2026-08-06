@@ -35,7 +35,7 @@ TRANSLATIONS = {
         "nav.projects": "Проєкти",
         "nav.new_project": "Новий проєкт",
         "nav.admin": "Адмін",
-        "nav.billing": "Баланс",
+        "nav.billing": "Поповнення балансу",
         "nav.logout": "Вийти",
 
         # ── Авторизація ────────────────────────────────────────
@@ -61,7 +61,7 @@ TRANSLATIONS = {
         "dash.subtitle": "Керування трафіком GA4",
         "dash.balance": "Баланс кредитів",
         "dash.credit_hint": "1 кредит = 1 хіт",
-        "dash.per_minute_short": "хіт/хв",
+        "dash.per_minute_short": "хітів / 30 хв",
         "dash.total_projects": "Всього проєктів",
         "dash.active": "Активних",
         "dash.sent": "Надіслано",
@@ -120,7 +120,7 @@ TRANSLATIONS = {
         "billing.auto_credit_note":
             "Кредити нараховуються автоматично протягом 10 хвилин після надходження оплати.",
         "billing.purpose_warning":
-            "Вкажіть призначення платежу точно як вказано нижче — інакше система не зможе "
+            "Вкажіть призначення платежу точно як вказано вище — інакше система не зможе "
             "автоматично зіставити оплату з вашим акаунтом.",
         "billing.recipient": "Отримувач",
         "billing.iban": "IBAN",
@@ -132,7 +132,7 @@ TRANSLATIONS = {
         "billing.order_id": "Номер замовлення",
         "billing.status": "Статус",
         "billing.status_pending": "Очікує оплати",
-        "billing.status_paid": "Оплачено",
+        "billing.status_paid": "Зараховано",
         "billing.status_cancelled": "Скасовано",
         "billing.my_orders": "Мої замовлення",
         "billing.no_orders": "Замовлень ще немає",
@@ -152,8 +152,8 @@ TRANSLATIONS = {
         "admin.add_credits": "Нарахувати кредити",
         "admin.amount": "Кількість",
         "admin.comment": "Коментар",
-        "admin.orders": "Замовлення на оплату",
-        "admin.confirm_payment": "Підтвердити оплату",
+        "admin.orders": "Історія поповнень",
+        "admin.confirm_payment": "Поповнено",
         "admin.delete_user_confirm": "Видалити користувача разом з проєктами?",
         "admin.panel_title": "Панель адміністратора",
         "admin.total_users": "Всього користувачів",
@@ -184,7 +184,7 @@ TRANSLATIONS = {
         "nav.projects": "Проекты",
         "nav.new_project": "Новый проект",
         "nav.admin": "Админ",
-        "nav.billing": "Баланс",
+        "nav.billing": "Пополнение баланса",
         "nav.logout": "Выйти",
 
         "auth.login": "Вход",
@@ -208,7 +208,7 @@ TRANSLATIONS = {
         "dash.subtitle": "Управление трафиком GA4",
         "dash.balance": "Баланс кредитов",
         "dash.credit_hint": "1 кредит = 1 хит",
-        "dash.per_minute_short": "хит/мин",
+        "dash.per_minute_short": "хитов / 30 мин",
         "dash.total_projects": "Всего проектов",
         "dash.active": "Активных",
         "dash.sent": "Отправлено",
@@ -264,7 +264,7 @@ TRANSLATIONS = {
         "billing.auto_credit_note":
             "Кредиты начисляются автоматически в течение 10 минут после поступления оплаты.",
         "billing.purpose_warning":
-            "Укажите назначение платежа точно как указано ниже — иначе система не сможет "
+            "Укажите назначение платежа точно как указано выше — иначе система не сможет "
             "автоматически сопоставить оплату с вашим аккаунтом.",
         "billing.recipient": "Получатель",
         "billing.iban": "IBAN",
@@ -276,7 +276,7 @@ TRANSLATIONS = {
         "billing.order_id": "Номер заказа",
         "billing.status": "Статус",
         "billing.status_pending": "Ожидает оплаты",
-        "billing.status_paid": "Оплачен",
+        "billing.status_paid": "Зачислено",
         "billing.status_cancelled": "Отменён",
         "billing.my_orders": "Мои заказы",
         "billing.no_orders": "Заказов пока нет",
@@ -295,8 +295,8 @@ TRANSLATIONS = {
         "admin.add_credits": "Начислить кредиты",
         "admin.amount": "Количество",
         "admin.comment": "Комментарий",
-        "admin.orders": "Заказы на оплату",
-        "admin.confirm_payment": "Подтвердить оплату",
+        "admin.orders": "История пополнений",
+        "admin.confirm_payment": "Пополнено",
         "admin.delete_user_confirm": "Удалить пользователя вместе с проектами?",
         "admin.panel_title": "Панель администратора",
         "admin.total_users": "Всего пользователей",
@@ -327,7 +327,7 @@ TRANSLATIONS = {
         "nav.projects": "Projects",
         "nav.new_project": "New project",
         "nav.admin": "Admin",
-        "nav.billing": "Balance",
+        "nav.billing": "Top up balance",
         "nav.logout": "Log out",
 
         "auth.login": "Sign in",
@@ -351,7 +351,7 @@ TRANSLATIONS = {
         "dash.subtitle": "GA4 traffic management",
         "dash.balance": "Credit balance",
         "dash.credit_hint": "1 credit = 1 hit",
-        "dash.per_minute_short": "hits/min",
+        "dash.per_minute_short": "hits / 30 min",
         "dash.total_projects": "Total projects",
         "dash.active": "Active",
         "dash.sent": "Sent",
@@ -407,7 +407,7 @@ TRANSLATIONS = {
         "billing.auto_credit_note":
             "Credits are added automatically within 10 minutes after the payment arrives.",
         "billing.purpose_warning":
-            "Enter the payment reference exactly as shown below — otherwise the system "
+            "Enter the payment reference exactly as shown above — otherwise the system "
             "cannot automatically match the payment to your account.",
         "billing.recipient": "Recipient",
         "billing.iban": "IBAN",
@@ -419,7 +419,7 @@ TRANSLATIONS = {
         "billing.order_id": "Order number",
         "billing.status": "Status",
         "billing.status_pending": "Awaiting payment",
-        "billing.status_paid": "Paid",
+        "billing.status_paid": "Credited",
         "billing.status_cancelled": "Cancelled",
         "billing.my_orders": "My orders",
         "billing.no_orders": "No orders yet",
@@ -438,8 +438,8 @@ TRANSLATIONS = {
         "admin.add_credits": "Add credits",
         "admin.amount": "Amount",
         "admin.comment": "Comment",
-        "admin.orders": "Payment orders",
-        "admin.confirm_payment": "Confirm payment",
+        "admin.orders": "Top-up history",
+        "admin.confirm_payment": "Credited",
         "admin.delete_user_confirm": "Delete this user together with their projects?",
         "admin.panel_title": "Administrator panel",
         "admin.total_users": "Total users",

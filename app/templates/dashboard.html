@@ -171,7 +171,7 @@
           return;
         }
         el.innerHTML = buildSvg(stats.points, el.dataset.project);
-        if (label) label.textContent = stats.current;
+        if (label) label.textContent = stats.total;
       });
     } catch (e) { /* мережа відпала — лишаємо попередній стан */ }
   }
