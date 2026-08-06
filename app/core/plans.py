@@ -15,30 +15,31 @@ CURRENCY_SYMBOL = "₴"
 # плану: credits * CLICK_PRICE. Зміниш тут — перерахується все автоматично.
 CLICK_PRICE = 0.0058
 
-# Знижка, яку показуємо плашкою "-15%" і застосовуємо до base_price,
-# щоб отримати фінальну ціну (те, що реально платить клієнт).
-DISCOUNT_PERCENT = 15
-
 # key — стабільний ідентифікатор, потрапляє в замовлення.
 # credits — скільки кредитів нараховується (1 кредит = 1 хіт/клік).
+# discount_percent — знижка від base_price саме для цього плану (0, якщо
+# немає); показується плашкою "-N%" тільки на планах, де вона задана.
 PLANS = [
     {
         "key": "start",
         "name": {"uk": "Старт", "ru": "Старт", "en": "Start"},
         "credits": 50_000,
         "popular": False,
+        "discount_percent": 0,
     },
     {
         "key": "business",
         "name": {"uk": "Бізнес", "ru": "Бизнес", "en": "Business"},
         "credits": 500_000,
         "popular": True,
+        "discount_percent": 0,
     },
     {
         "key": "max",
         "name": {"uk": "Максимум", "ru": "Максимум", "en": "Max"},
         "credits": 2_000_000,
         "popular": False,
+        "discount_percent": 15,
     },
 ]
 
@@ -70,8 +71,9 @@ def base_price(plan: dict) -> float:
 
 
 def final_price(plan: dict) -> float:
-    """Ціна після знижки — те, що реально платить клієнт."""
-    return round(base_price(plan) * (1 - DISCOUNT_PERCENT / 100), 2)
+    """Ціна після знижки цього плану — те, що реально платить клієнт."""
+    discount = plan.get("discount_percent", 0)
+    return round(base_price(plan) * (1 - discount / 100), 2)
 
 
 def requisites_ready() -> bool:

@@ -17,7 +17,6 @@ from app.core.i18n import resolve_lang
 from app.core.plans import (
     CURRENCY,
     CURRENCY_SYMBOL,
-    DISCOUNT_PERCENT,
     FOP_REQUISITES,
     PLANS,
     base_price,
@@ -42,7 +41,7 @@ def _localized_plans(lang: str) -> list:
             "popular": p.get("popular", False),
             "base_price": base_price(p),
             "price": final_price(p),
-            "discount_percent": DISCOUNT_PERCENT,
+            "discount_percent": p.get("discount_percent", 0),
             # ціна за 1000 кредитів після знижки — щоб було видно вигоду більших планів
             "per_1k": round(final_price(p) / (p["credits"] / 1000), 4),
         }
