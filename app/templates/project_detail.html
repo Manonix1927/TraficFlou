@@ -343,15 +343,14 @@ function sourcesForm() {
 
 // ── Device ───────────────────────────────────────────────────
 function deviceForm() {
+  // device_map нормализует значение на стороне сервера — сюда всегда
+  // приходит объект {desktop, mobile, tablet} с реально сохранёнными %
   let dm = { desktop: 100, mobile: 0, tablet: 0 };
   try {
-    {% if project.device is mapping %}
-      dm = {{ project.device|tojson }};
-    {% elif project.device == 'mobile' %}
-      dm = { desktop: 0, mobile: 100, tablet: 0 };
-    {% elif project.device == 'mixed' %}
-      dm = { desktop: 50, mobile: 50, tablet: 0 };
-    {% endif %}
+    const saved = {{ project.device_map|tojson }};
+    if (saved && typeof saved === 'object') {
+      dm = Object.assign({ desktop: 0, mobile: 0, tablet: 0 }, saved);
+    }
   } catch(e) {}
   return makeLinked([
     { key: 'desktop', icon: '🖥', label: 'Desktop', pct: Number(dm.desktop) || 0 },

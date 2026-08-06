@@ -132,19 +132,14 @@ def send_project_hits(
         hits_count = reserved
 
         # Генерируем задания
-        def pick_device(d):
-            if isinstance(d, dict) and d:
-                return pick_weighted(d)
-            # legacy string format
-            if d == "mixed":
-                return random.choice(["desktop", "mobile", "tablet"])
-            return d if d in ("desktop", "mobile", "tablet") else "desktop"
+        from app.core.devices import normalize_device
+        device_map = normalize_device(device)
 
         jobs = []
         for _ in range(hits_count):
             country = pick_weighted(geo)
             source = pick_weighted(sources)
-            jobs.append((tid, site_url, country, source, None, gtm_id, pick_device(device)))
+            jobs.append((tid, site_url, country, source, None, gtm_id, pick_weighted(device_map)))
 
         # Параллельная отправка
         ok_count = 0

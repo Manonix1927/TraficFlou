@@ -52,6 +52,12 @@ class Project(Base):
     user = relationship("User", back_populates="projects")
     hit_logs = relationship("HitLog", back_populates="project", cascade="all, delete-orphan")
 
+    @property
+    def device_map(self) -> dict:
+        """device всегда как {device: %} — колонка может вернуть строку."""
+        from app.core.devices import normalize_device
+        return normalize_device(self.device)
+
 
 class HitLog(Base):
     __tablename__ = "hit_logs"

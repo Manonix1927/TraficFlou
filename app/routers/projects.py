@@ -1,6 +1,5 @@
 import json
 import math
-import random
 import re
 import requests as http_requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -283,14 +282,10 @@ def _send_hits_sync(project_id: int, user_id: int, count: int, tid: str, site_ur
             return
         count = reserved
 
-        def pick_dev(d):
-            if isinstance(d, dict) and d:
-                return pick_weighted(d)
-            if d == "mixed":
-                return random.choice(["desktop", "mobile", "tablet"])
-            return d if d in ("desktop", "mobile", "tablet") else "desktop"
+        from app.core.devices import normalize_device
+        device_map = normalize_device(device)
 
-        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id, pick_dev(device or "desktop")) for _ in range(count)]
+        jobs = [(tid, site_url, pick_weighted(geo), pick_weighted(sources), None, gtm_id, pick_weighted(device_map)) for _ in range(count)]
         ok = 0
         logs = []
         with ThreadPoolExecutor(max_workers=10) as ex:
