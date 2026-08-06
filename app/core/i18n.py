@@ -158,6 +158,10 @@ TRANSLATIONS = {
         "billing.back_to_plans": "Обрати інший план",
         "billing.requisites_soon":
             "Реквізити зараз уточнюються. Зверніться до підтримки, щоб завершити оплату.",
+        "billing.pending_title": "У вас є заявка, що очікує оплати",
+        "billing.pending_text":
+            "Щоб створити нову заявку, спочатку скасуйте поточну — {plan}, №{id} на {amount}.",
+        "billing.pending_view": "Переглянути заявку",
 
         # ── Адмінка ────────────────────────────────────────────
         "admin.title": "Адмін-панель",
@@ -320,6 +324,10 @@ TRANSLATIONS = {
         "billing.back_to_plans": "Выбрать другой план",
         "billing.requisites_soon":
             "Реквизиты сейчас уточняются. Обратитесь в поддержку, чтобы завершить оплату.",
+        "billing.pending_title": "У вас есть заявка, ожидающая оплаты",
+        "billing.pending_text":
+            "Чтобы создать новую заявку, сначала отмените текущую — {plan}, №{id} на {amount}.",
+        "billing.pending_view": "Просмотреть заявку",
 
         "admin.title": "Админ-панель",
         "admin.users": "Пользователи",
@@ -481,6 +489,10 @@ TRANSLATIONS = {
         "billing.back_to_plans": "Choose another plan",
         "billing.requisites_soon":
             "Payment details are being finalised. Please contact support to complete the payment.",
+        "billing.pending_title": "You have an order awaiting payment",
+        "billing.pending_text":
+            "To create a new order, cancel the current one first — {plan}, #{id} for {amount}.",
+        "billing.pending_view": "View order",
 
         "admin.title": "Admin panel",
         "admin.users": "Users",

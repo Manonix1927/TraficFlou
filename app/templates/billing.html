@@ -18,6 +18,31 @@
     </div>
   </div>
 
+  <!-- Активна заявка блокує створення нової -->
+  {% if pending_order %}
+  <div class="bg-amber-900/30 border border-amber-700 rounded-xl px-5 py-4 mb-8 flex items-start justify-between gap-4 flex-wrap">
+    <div class="flex items-start gap-3">
+      <svg class="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-8.25 3.375h.008v.008h-.008v-.008z"/>
+      </svg>
+      <div>
+        <p class="text-amber-300 font-semibold text-sm">{{ t('billing.pending_title') }}</p>
+        <p class="text-amber-200/80 text-sm mt-1">
+          {{ t('billing.pending_text').format(
+            plan=pending_order.plan_name,
+            id=pending_order.id,
+            amount=symbol ~ '{:,.2f}'.format(pending_order.amount|float)
+          ) }}
+        </p>
+      </div>
+    </div>
+    <a href="/billing/order/{{ pending_order.id }}"
+      class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-lg border border-amber-600 text-amber-300 hover:bg-amber-900/40 transition">
+      {{ t('billing.pending_view') }}
+    </a>
+  </div>
+  {% endif %}
+
   <!-- Plans -->
   <h2 class="text-white font-semibold mb-4">{{ t('billing.choose_plan') }}</h2>
   <div class="grid gap-4 mb-10" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));">
@@ -53,6 +78,12 @@
         {{ symbol }}{{ plan.per_1k }} {{ t('billing.per_credit') }}
       </p>
 
+      {% if pending_order %}
+      <button type="button" disabled title="{{ t('billing.pending_title') }}"
+        class="mt-6 w-full py-2.5 rounded-lg text-sm font-semibold bg-slate-700/50 text-slate-500 cursor-not-allowed">
+        {{ t('billing.pay') }}
+      </button>
+      {% else %}
       <form method="post" action="/billing/order" class="mt-6">
         <input type="hidden" name="plan_key" value="{{ plan.key }}">
         <button type="submit"
@@ -62,6 +93,7 @@
           {{ t('billing.pay') }}
         </button>
       </form>
+      {% endif %}
     </div>
     {% endfor %}
   </div>

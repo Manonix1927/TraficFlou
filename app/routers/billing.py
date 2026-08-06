@@ -49,6 +49,16 @@ def _localized_plans(lang: str) -> list:
     ]
 
 
+def _pending_order(db: Session, user_id: int):
+    """Активна (ще не оплачена й не скасована) заявка користувача, якщо є."""
+    return (
+        db.query(models.PaymentOrder)
+        .filter(models.PaymentOrder.user_id == user_id, models.PaymentOrder.status == "pending")
+        .order_by(models.PaymentOrder.id.desc())
+        .first()
+    )
+
+
 @router.get("/billing", response_class=HTMLResponse)
 def billing_page(
     request: Request,
@@ -68,6 +78,7 @@ def billing_page(
         "user": user,
         "plans": _localized_plans(lang),
         "orders": orders,
+        "pending_order": _pending_order(db, user.id),
         "currency": CURRENCY,
         "symbol": CURRENCY_SYMBOL,
     })
@@ -83,6 +94,14 @@ def create_order(
     plan = get_plan(plan_key)
     if not plan:
         raise HTTPException(400, "Невідомий план")
+
+    # Одна активна заявка на користувача одночасно — заявки в статусі
+    # "Зараховано"/"Скасовано" не заважають, тільки "pending". Перевірка
+    # тут дублює клієнтську (кнопки вимкнені), бо форму можна відправити
+    # напряму POST-ом повз задизейблені кнопки.
+    existing = _pending_order(db, user.id)
+    if existing:
+        return RedirectResponse(f"/billing/order/{existing.id}", status_code=302)
 
     lang = resolve_lang(request)
     order = models.PaymentOrder(
