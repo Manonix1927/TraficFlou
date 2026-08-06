@@ -320,12 +320,12 @@
     <div class="flex gap-3">
       <button type="submit"
         class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition">
-        Сохранить настройки
+        {{ t('proj.save_settings') }}
       </button>
       <button type="button"
-        onclick="if(confirm('Удалить проект?')) document.getElementById('deleteForm').submit()"
+        onclick="if(confirm('{{ t('proj.delete_confirm') }}')) document.getElementById('deleteForm').submit()"
         class="px-6 bg-transparent border border-red-800 text-red-400 hover:bg-red-900/20 font-semibold py-3 rounded-xl transition text-sm">
-        Удалить
+        {{ t('common.delete') }}
       </button>
     </div>
   </form>
@@ -337,23 +337,23 @@
 async function sendNow() {
   const btn = document.getElementById('sendNowBtn');
   const label = document.getElementById('sendNowLabel');
-  btn.disabled = true; label.textContent = 'Отправляем...';
+  btn.disabled = true; label.textContent = '{{ t('proj.sending') }}';
   try {
     const r = await fetch('/projects/{{ project.id }}/send-now', {method:'POST'});
     // Session expired → server redirects to /login; fetch follows it and
     // returns HTML, so r.json() would throw. Detect and send user to login.
     if (r.redirected) { location.href = r.url; return; }
     if (!r.ok) {
-      let msg = 'Ошибка';
+      let msg = '{{ t('common.error') }}';
       try { const e = await r.json(); if (e.detail) msg = e.detail; } catch(_) {}
       label.textContent = msg; btn.disabled = false; return;
     }
     const data = await r.json();
     if (data.ok) {
-      label.textContent = '✓ Отправлено ' + data.count + ' хитов';
+      label.textContent = '✓ {{ t('proj.sent_ok') }} ' + data.count + ' {{ t('proj.hits') }}';
       setTimeout(() => location.reload(), 2000);
-    } else { label.textContent = 'Ошибка'; btn.disabled = false; }
-  } catch(e) { label.textContent = 'Ошибка'; btn.disabled = false; }
+    } else { label.textContent = '{{ t('common.error') }}'; btn.disabled = false; }
+  } catch(e) { label.textContent = '{{ t('common.error') }}'; btn.disabled = false; }
 }
 
 // ── Live traffic chart ───────────────────────────────────────

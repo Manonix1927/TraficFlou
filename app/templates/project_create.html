@@ -5,21 +5,21 @@
   <div class="mb-8">
     <a href="/dashboard" class="text-slate-400 hover:text-white text-sm flex items-center gap-1 mb-4">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      Назад
+      {{ t('common.back') }}
     </a>
-    <h1 class="text-2xl font-bold text-white">Новый проект</h1>
-    <p class="text-slate-400 text-sm mt-1">Настройте параметры трафика для вашего сайта</p>
+    <h1 class="text-2xl font-bold text-white">{{ t('proj.create_title') }}</h1>
+    <p class="text-slate-400 text-sm mt-1">{{ t('proj.create_subtitle') }}</p>
   </div>
 
   <form method="post" action="/projects/create" x-data="projectForm()" @submit="onSubmit($event)" class="space-y-6">
 
     <!-- Basic info -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 space-y-4">
-      <h2 class="font-semibold text-white">Основная информация</h2>
+      <h2 class="font-semibold text-white">{{ t('proj.basic_info') }}</h2>
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">{{ t('proj.name') }}</label>
-          <input name="name" required placeholder="Мой сайт" class="input-field"/>
+          <input name="name" required placeholder="{{ t('proj.name_placeholder') }}" class="input-field"/>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1.5">{{ t('proj.site_url') }}</label>
@@ -31,11 +31,11 @@
       <!-- Detection status -->
       <div x-show="detectState === 'detecting'" class="flex items-center gap-2 text-sm text-slate-400">
         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 8h4z"></path></svg>
-        Определяем GA4 ID с сайта…
+        {{ t('proj.detecting_ga') }}
       </div>
       <div x-show="detectState === 'found'" class="flex items-center justify-between gap-3 text-sm bg-green-900/30 border border-green-700 rounded-lg px-4 py-2.5">
-        <span class="text-green-400">✓ GA4 ID определён: <span class="font-mono font-semibold" x-text="gaTid"></span><template x-if="gtmId"><span class="text-green-500/80"> · <span class="font-mono" x-text="gtmId"></span></span></template></span>
-        <button type="button" @click="detectState = 'manual'" class="text-xs text-slate-400 hover:text-white underline">изменить вручную</button>
+        <span class="text-green-400">✓ {{ t('proj.ga_detected') }} <span class="font-mono font-semibold" x-text="gaTid"></span><template x-if="gtmId"><span class="text-green-500/80"> · <span class="font-mono" x-text="gtmId"></span></span></template></span>
+        <button type="button" @click="detectState = 'manual'" class="text-xs text-slate-400 hover:text-white underline">{{ t('proj.edit_manually') }}</button>
       </div>
 
       <!-- Manual ID entry — hidden unless detection failed or user chose to edit.
@@ -49,7 +49,7 @@
             <p class="text-xs mt-1 text-red-400" x-show="detectMsg" x-text="detectMsg"></p>
           </div>
           <div>
-            <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">(опционально)</span></label>
+            <label class="block text-sm text-slate-400 mb-1.5">GTM Container ID <span class="text-slate-500">({{ t('common.optional') }})</span></label>
             <input name="gtm_id" placeholder="GTM-XXXXXXX" class="input-field" x-model="gtmId"/>
           </div>
         </div>
@@ -66,15 +66,15 @@
 
     <!-- Traffic volume + device -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 p-6">
-      <h2 class="font-semibold text-white mb-4">Объём и устройства</h2>
+      <h2 class="font-semibold text-white mb-4">{{ t('proj.volume_device') }}</h2>
       <div class="grid grid-cols-3 gap-4">
         <div class="col-span-1">
-          <label class="block text-sm text-slate-400 mb-1.5">Хитов в день</label>
+          <label class="block text-sm text-slate-400 mb-1.5">{{ t('proj.daily_hits_label') }}</label>
           <input name="daily_hits" type="number" value="100" min="10" max="100000" class="input-field" x-model="dailyHits"/>
         </div>
         <div class="col-span-2" x-data="deviceForm()">
           <label class="block text-sm text-slate-400 mb-1.5">
-            Тип устройства
+            {{ t('proj.device') }}
             <span class="ml-2 text-xs font-semibold" :class="total===100?'text-green-400':'text-red-400'"><span x-text="total"></span>%</span>
           </label>
           <!-- Hidden inputs for reliable form submission -->
@@ -104,7 +104,7 @@
             <span x-text="total"></span>%
           </span>
           <button type="button" @click="add()"
-            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">+ Добавить</button>
+            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">+ {{ t('proj.add') }}</button>
         </div>
       </div>
       <div class="space-y-3">
@@ -165,7 +165,7 @@
             <span x-text="total"></span>%
           </span>
           <button type="button" @click="addRow()"
-            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">+ Страна</button>
+            class="text-xs text-blue-400 hover:text-blue-300 border border-blue-700 rounded px-2 py-1">+ {{ t('proj.add_country') }}</button>
         </div>
       </div>
       <div class="space-y-3">
@@ -269,11 +269,11 @@ function projectForm() {
           this.gtmId = data.gtm_id || '';
           this.detectState = 'found';
         } else {
-          this.detectMsg = 'Не удалось определить автоматически — введите GA4 ID вручную';
+          this.detectMsg = '{{ t('proj.detect_fail') }}';
           this.detectState = 'manual';
         }
       } catch(e) {
-        this.detectMsg = 'Ошибка запроса — введите GA4 ID вручную';
+        this.detectMsg = '{{ t('proj.detect_error') }}';
         this.detectState = 'manual';
       }
     },
@@ -284,7 +284,7 @@ function projectForm() {
       e.preventDefault();
       if (this.detectState === 'detecting') return;  // wait for detection, then submit again
       this.detectState = 'manual';
-      if (!this.detectMsg) this.detectMsg = 'Укажите GA4 Measurement ID';
+      if (!this.detectMsg) this.detectMsg = '{{ t('proj.enter_ga_id') }}';
       this.$nextTick(() => {
         const el = this.$root.querySelector('input[name=ga_tid]');
         if (el) el.focus();
