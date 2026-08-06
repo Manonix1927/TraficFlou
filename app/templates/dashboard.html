@@ -47,6 +47,16 @@
           </div>
         </div>
         <div class="flex items-center gap-6">
+          <!-- Міні-графік трафіку за останні 30 хв -->
+          <div class="hidden md:block text-right">
+            <div class="flex items-baseline justify-end gap-1.5">
+              <span class="text-white font-semibold spark-current" data-project="{{ project.id }}">–</span>
+              <span class="text-xs text-slate-400">{{ t('dash.per_minute_short') }}</span>
+            </div>
+            <div class="spark mt-1" data-project="{{ project.id }}"
+              style="width:132px;height:34px;"></div>
+          </div>
+
           <div class="text-right">
             <p class="text-xs text-slate-400">{{ t('dash.sent') }}</p>
             <p class="text-white font-semibold">{{ project.hits_sent | default(0) }}</p>
@@ -82,4 +92,93 @@
   </div>
   {% endif %}
 </div>
+
+{% if projects %}
+<script>
+// ── Міні-графіки трафіку в списку проєктів ───────────────────
+// Малюємо власним SVG, а не Chart.js: на сторінці може бути багато
+// проєктів, і десяток інстансів графіка тут зайвий.
+(function () {
+  const WIDTH = 132, HEIGHT = 34, PAD = 2;
+
+  function buildSvg(points, projectId) {
+    const n = points.length;
+    if (!n) return '';
+    const peak = Math.max(...points, 1);
+    const stepX = (WIDTH - PAD * 2) / Math.max(n - 1, 1);
+    const scaleY = (HEIGHT - PAD * 2) / peak;
+
+    const coords = points.map((v, i) => [
+      PAD + i * stepX,
+      HEIGHT - PAD - v * scaleY,
+    ]);
+
+    // Згладжена крива через середини сусідніх точок
+    let d = `M ${coords[0][0].toFixed(1)} ${coords[0][1].toFixed(1)}`;
+    for (let i = 1; i < coords.length; i++) {
+      const [px, py] = coords[i - 1];
+      const [cx, cy] = coords[i];
+      const mx = (px + cx) / 2;
+      d += ` Q ${px.toFixed(1)} ${py.toFixed(1)} ${mx.toFixed(1)} ${((py + cy) / 2).toFixed(1)}`;
+    }
+    const last = coords[coords.length - 1];
+    d += ` L ${last[0].toFixed(1)} ${last[1].toFixed(1)}`;
+
+    const area = `${d} L ${last[0].toFixed(1)} ${HEIGHT} L ${coords[0][0].toFixed(1)} ${HEIGHT} Z`;
+    const gid = 'sparkgrad' + projectId;
+
+    return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}"
+        preserveAspectRatio="none" style="display:block;overflow:visible">
+      <defs>
+        <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#f97316"/>
+          <stop offset="0.45" stop-color="#ec4899"/>
+          <stop offset="1" stop-color="#8b5cf6"/>
+        </linearGradient>
+        <linearGradient id="${gid}f" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ec4899" stop-opacity="0.30"/>
+          <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${area}" fill="url(#${gid}f)"/>
+      <path d="${d}" fill="none" stroke="url(#${gid})" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.4" fill="#ec4899"/>
+    </svg>`;
+  }
+
+  function renderEmpty(el) {
+    el.innerHTML = `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}"
+        style="display:block">
+      <line x1="${PAD}" y1="${HEIGHT - PAD}" x2="${WIDTH - PAD}" y2="${HEIGHT - PAD}"
+        stroke="rgb(71 85 105)" stroke-width="1.5" stroke-dasharray="3 3"/>
+    </svg>`;
+  }
+
+  async function refresh() {
+    const holders = document.querySelectorAll('.spark');
+    if (!holders.length) return;
+    try {
+      const r = await fetch('/api/dashboard/sparklines?minutes=30');
+      if (!r.ok) return;
+      const data = await r.json();
+      holders.forEach(el => {
+        const stats = data.projects[el.dataset.project];
+        const label = document.querySelector(`.spark-current[data-project="${el.dataset.project}"]`);
+        if (!stats || !stats.total) {
+          renderEmpty(el);
+          if (label) label.textContent = '0';
+          return;
+        }
+        el.innerHTML = buildSvg(stats.points, el.dataset.project);
+        if (label) label.textContent = stats.current;
+      });
+    } catch (e) { /* мережа відпала — лишаємо попередній стан */ }
+  }
+
+  refresh();
+  setInterval(refresh, 30000);
+})();
+</script>
+{% endif %}
 {% endblock %}

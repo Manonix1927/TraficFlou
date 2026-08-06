@@ -48,6 +48,64 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: models.User
     })
 
 
+@router.get("/api/dashboard/sparklines", response_class=JSONResponse)
+def dashboard_sparklines(
+    minutes: int = 30,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    """
+    Кліки по хвилинах одразу для всіх проєктів користувача —
+    для міні-графіків у списку на головній. Один запит замість N.
+    """
+    from datetime import datetime, timedelta
+
+    minutes = max(5, min(minutes, 180))
+    now = datetime.utcnow().replace(second=0, microsecond=0)
+    since = now - timedelta(minutes=minutes - 1)
+
+    project_ids = [
+        pid for (pid,) in db.query(models.Project.id)
+        .filter(models.Project.user_id == user.id).all()
+    ]
+    if not project_ids:
+        return JSONResponse({"minutes": minutes, "projects": {}})
+
+    rows = (
+        db.query(models.HitLog.project_id, models.HitLog.created_at)
+        .filter(
+            models.HitLog.project_id.in_(project_ids),
+            models.HitLog.created_at >= since,
+            models.HitLog.status == 204,
+        )
+        .all()
+    )
+
+    buckets = {pid: [0] * minutes for pid in project_ids}
+    for pid, created in rows:
+        if created is None:
+            continue
+        if created.tzinfo is not None:
+            created = created.replace(tzinfo=None)
+        idx = int((created.replace(second=0, microsecond=0) - since).total_seconds() // 60)
+        if 0 <= idx < minutes:
+            buckets[pid][idx] += 1
+
+    return JSONResponse({
+        "minutes": minutes,
+        "projects": {
+            str(pid): {
+                "points": vals,
+                "total": sum(vals),
+                # останню хвилину не беремо — вона ще не завершилась
+                "current": vals[-2] if len(vals) > 1 else 0,
+                "peak": max(vals),
+            }
+            for pid, vals in buckets.items()
+        },
+    })
+
+
 @router.get("/api/detect-ga", response_class=JSONResponse)
 def detect_ga(url: str, user: models.User = Depends(get_current_user)):
     """
