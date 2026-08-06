@@ -3,6 +3,11 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
+# Публічний ID користувача = внутрішній id + це зміщення. Показуємо його
+# замість id у платіжних реквізитах, щоб перший реальний користувач мав
+# номер 101, а не 1 — так виглядає, що сервісом уже хтось користується.
+USER_PUBLIC_ID_OFFSET = 100
+
 
 class User(Base):
     __tablename__ = "users"
@@ -17,6 +22,11 @@ class User(Base):
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     transactions = relationship("CreditTransaction", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("PaymentOrder", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def public_id(self) -> int:
+        """ID, який бачить клієнт (у призначенні платежу тощо)."""
+        return self.id + USER_PUBLIC_ID_OFFSET
 
 
 class Project(Base):
@@ -99,8 +109,13 @@ class PaymentOrder(Base):
 
     @property
     def purpose(self) -> str:
-        """Призначення платежу — за ним звіряємо оплату."""
-        return f"Поповнення балансу, замовлення #{self.id}"
+        """
+        Призначення платежу — за ним звіряємо оплату. Має лишатись стабільним
+        для конкретного користувача (не прив'язане до номера замовлення),
+        інакше повторна оплата з тим самим призначенням не підхопиться.
+        """
+        public_id = self.user.public_id if self.user else self.user_id + USER_PUBLIC_ID_OFFSET
+        return f"Оплата маркетингових послуг з залучення трафіку, ID {public_id}"
 
 
 class CreditTransaction(Base):

@@ -43,11 +43,13 @@ PLANS = [
     },
 ]
 
-# Реквізити ФОП. Заповни або постав через змінні оточення на Railway.
+# Реквізити ФОП. За замовчуванням — фактичні дані нижче; на Railway можна
+# перекрити змінними оточення (FOP_RECIPIENT / FOP_IBAN / FOP_EDRPOU /
+# FOP_BANK), якщо реквізити зміняться і не хочеться чіпати код.
 FOP_REQUISITES = {
-    "recipient": os.getenv("FOP_RECIPIENT", ""),
-    "iban": os.getenv("FOP_IBAN", ""),
-    "edrpou": os.getenv("FOP_EDRPOU", ""),
+    "recipient": os.getenv("FOP_RECIPIENT", "ФОП Волкова Анастасія Сергіївна"),
+    "iban": os.getenv("FOP_IBAN", "UA813348510000000026008363839"),
+    "edrpou": os.getenv("FOP_EDRPOU", "3587302862"),
     "bank": os.getenv("FOP_BANK", ""),
 }
 

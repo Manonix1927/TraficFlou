@@ -116,11 +116,15 @@ TRANSLATIONS = {
         "billing.per_credit": "за 1000 кредитів",
         "billing.requisites_title": "Реквізити для оплати",
         "billing.requisites_hint":
-            "Сплатіть суму на реквізити нижче та обов'язково вкажіть призначення платежу. "
-            "Після надходження коштів кредити буде зараховано протягом робочого дня.",
+            "Сплатіть суму на реквізити нижче та обов'язково вкажіть призначення платежу.",
+        "billing.auto_credit_note":
+            "Кредити нараховуються автоматично протягом 10 хвилин після надходження оплати.",
+        "billing.purpose_warning":
+            "Вкажіть призначення платежу точно як вказано нижче — інакше система не зможе "
+            "автоматично зіставити оплату з вашим акаунтом.",
         "billing.recipient": "Отримувач",
         "billing.iban": "IBAN",
-        "billing.edrpou": "ЄДРПОУ / ІПН",
+        "billing.edrpou": "ІПН/ДРФО",
         "billing.bank": "Банк",
         "billing.amount": "Сума до сплати",
         "billing.purpose": "Призначення платежу",
@@ -256,11 +260,15 @@ TRANSLATIONS = {
         "billing.per_credit": "за 1000 кредитов",
         "billing.requisites_title": "Реквизиты для оплаты",
         "billing.requisites_hint":
-            "Оплатите сумму по реквизитам ниже и обязательно укажите назначение платежа. "
-            "После поступления средств кредиты будут зачислены в течение рабочего дня.",
+            "Оплатите сумму по реквизитам ниже и обязательно укажите назначение платежа.",
+        "billing.auto_credit_note":
+            "Кредиты начисляются автоматически в течение 10 минут после поступления оплаты.",
+        "billing.purpose_warning":
+            "Укажите назначение платежа точно как указано ниже — иначе система не сможет "
+            "автоматически сопоставить оплату с вашим аккаунтом.",
         "billing.recipient": "Получатель",
         "billing.iban": "IBAN",
-        "billing.edrpou": "ЕДРПОУ / ИНН",
+        "billing.edrpou": "ИНН/РНУКПН",
         "billing.bank": "Банк",
         "billing.amount": "Сумма к оплате",
         "billing.purpose": "Назначение платежа",
@@ -395,11 +403,15 @@ TRANSLATIONS = {
         "billing.per_credit": "per 1000 credits",
         "billing.requisites_title": "Payment details",
         "billing.requisites_hint":
-            "Transfer the amount using the details below and be sure to include the payment "
-            "reference. Credits are added within one business day after the payment arrives.",
+            "Transfer the amount using the details below and be sure to include the payment reference.",
+        "billing.auto_credit_note":
+            "Credits are added automatically within 10 minutes after the payment arrives.",
+        "billing.purpose_warning":
+            "Enter the payment reference exactly as shown below — otherwise the system "
+            "cannot automatically match the payment to your account.",
         "billing.recipient": "Recipient",
         "billing.iban": "IBAN",
-        "billing.edrpou": "Company / Tax ID",
+        "billing.edrpou": "Tax ID",
         "billing.bank": "Bank",
         "billing.amount": "Amount due",
         "billing.purpose": "Payment reference",
