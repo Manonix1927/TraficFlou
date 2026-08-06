@@ -51,6 +51,10 @@ def run_migrations():
             END $$""",
             # Только пустые значения — сохранённые настройки не трогаем
             "UPDATE projects SET device = jsonb_build_object('desktop', 100) WHERE device IS NULL",
+            # payment_orders.amount создавался как INTEGER, а плани зі знижкою
+            # дають ціни з копійками (наприклад, 246.50) — розширюємо тип,
+            # інакше INSERT з дробовою сумою впаде.
+            "ALTER TABLE payment_orders ALTER COLUMN amount TYPE NUMERIC(10,2)",
         ] + common
     else:
         # SQLite: ADD COLUMN не поддерживает IF NOT EXISTS — если колонка

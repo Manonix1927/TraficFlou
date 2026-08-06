@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, JSON, Text, Index
+from sqlalchemy import Column, Integer, Numeric, String, Float, Boolean, DateTime, ForeignKey, JSON, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -89,7 +89,7 @@ class PaymentOrder(Base):
     plan_key = Column(String, nullable=False)
     plan_name = Column(String)
     credits = Column(Integer, nullable=False)
-    amount = Column(Integer, nullable=False)            # у гривнях
+    amount = Column(Numeric(10, 2), nullable=False)     # у гривнях, може бути з копійками
     currency = Column(String, default="UAH")
     status = Column(String, default="pending")          # pending | paid | cancelled
     created_at = Column(DateTime(timezone=True), server_default=func.now())

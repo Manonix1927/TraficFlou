@@ -17,10 +17,12 @@ from app.core.i18n import resolve_lang
 from app.core.plans import (
     CURRENCY,
     CURRENCY_SYMBOL,
+    DISCOUNT_PERCENT,
     FOP_REQUISITES,
     PLANS,
+    base_price,
+    final_price,
     get_plan,
-    plan_features,
     plan_name,
     requisites_ready,
 )
@@ -31,17 +33,18 @@ router = APIRouter()
 
 
 def _localized_plans(lang: str) -> list:
-    """Плани з підставленими під мову назвами та перевагами."""
+    """Плани з підставленими під мову назвами та розрахованими цінами."""
     return [
         {
             "key": p["key"],
             "name": plan_name(p, lang),
             "credits": p["credits"],
-            "price": p["price"],
             "popular": p.get("popular", False),
-            "features": plan_features(p, lang),
-            # ціна за 1000 кредитів — щоб було видно вигоду більших планів
-            "per_1k": round(p["price"] / (p["credits"] / 1000), 2),
+            "base_price": base_price(p),
+            "price": final_price(p),
+            "discount_percent": DISCOUNT_PERCENT,
+            # ціна за 1000 кредитів після знижки — щоб було видно вигоду більших планів
+            "per_1k": round(final_price(p) / (p["credits"] / 1000), 4),
         }
         for p in PLANS
     ]
@@ -88,7 +91,7 @@ def create_order(
         plan_key=plan["key"],
         plan_name=plan_name(plan, lang),
         credits=plan["credits"],
-        amount=plan["price"],
+        amount=final_price(plan),
         currency=CURRENCY,
         status="pending",
     )
